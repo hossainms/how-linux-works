@@ -1,0 +1,2147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How Linux Works: An Upside-Down Tree</title>
+<meta name="description" content="An interactive upside-down tree of the Linux operating system and its file system, with real tasks animated through every layer.">
+<link rel="canonical" href="https://hossainms.github.io/how-linux-works/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="How Linux Works: An Upside-Down Tree">
+<meta property="og:description" content="An interactive, beginner-friendly introduction to Linux for researchers: hardware, kernel, tools and applications drawn as an upside-down tree, with real tasks animated step by step.">
+<meta property="og:url" content="https://hossainms.github.io/how-linux-works/">
+<meta property="og:image" content="https://hossainms.github.io/how-linux-works/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Linux system drawn as an upside-down tree: hardware roots, the kernel trunk, and branches of tools and applications.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: soil band on top (roots = hardware), tree hangs downward to the apps and the outside world.
+   Diagram on the left, a terminal + details column on the right; stacks on narrow screens. */
+:root {
+  --bg: #eef2ec;
+  --panel: #ffffff;
+  --line: #d3dccf;
+  --ink: #1a231d;
+  --muted: #536156;
+  --faint: #637067;
+  --sky1: #e6eff2;
+  --sky2: #e4eedb;
+  --soil1: #5a3e28;
+  --soil2: #2f2016;
+  --roothair: #c49a6c;
+  --bark: #7b5534;
+  --sap: #f6dfae;
+  --foliage: #c9e3bb;
+  --kernel: #c23b22;
+  --kernel2: #8f2414;
+  --lib: #6b3fa0;
+  --svc: #1f4f9c;
+  --shell: #2c7a3c;
+  --tool: #1f3b54;
+  --leaf: #3f8a3a;
+  --leaf-bg: #f6fbf2;
+  --ext: #17396b;
+  --chip: #1c232c;
+  --chip-ink: #eef2f6;
+  --on-color: #ffffff;
+  --gold: #d9952a;
+  --focus: #1f6feb;
+  --link: #b3361f;
+  --brand: #b3361f;
+  --brand-ink: #ffffff;
+  --code-bg: #121915;
+  --code-ink: #d6e4d6;
+  --code-dim: #7d9884;
+  --code-cmd: #a6e38f;
+  --c-prog: #0f766e;
+  --c-cfg: #9a3412;
+  --c-home: #6d28d9;
+  --c-dev: #1d4ed8;
+  --c-var: #a16207;
+  --c-virt: #be123c;
+  --f-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1310; --panel: #141c17; --line: #26332b; --ink: #e4ece6; --muted: #a3b2a8; --faint: #859489;
+    --sky1: #0f1a1d; --sky2: #0f1a12; --soil1: #3e2a1b; --soil2: #1d140d; --roothair: #a37c52;
+    --bark: #8c6544; --sap: #f0cf8a; --foliage: #1b3321; --leaf-bg: #15231a; --tool: #25465f;
+    --leaf: #5aa651; --chip: #10161c; --focus: #58a6ff; --code-bg: #0a0f0c; --link: #ff8f75; --brand: #ff8f75; --brand-ink: #1a0c08;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1310; --panel: #141c17; --line: #26332b; --ink: #e4ece6; --muted: #a3b2a8; --faint: #859489;
+  --sky1: #0f1a1d; --sky2: #0f1a12; --soil1: #3e2a1b; --soil2: #1d140d; --roothair: #a37c52;
+  --bark: #8c6544; --sap: #f0cf8a; --foliage: #1b3321; --leaf-bg: #15231a; --tool: #25465f;
+  --leaf: #5aa651; --chip: #10161c; --focus: #58a6ff; --code-bg: #0a0f0c; --link: #ff8f75; --brand: #ff8f75; --brand-ink: #1a0c08;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+code, pre, .tblock, .tries, .term, .t-mono, .t-dir { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1520px; margin: 0 auto; padding: 20px 20px 32px; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* header */
+.top { display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.top > div { min-width: 0; flex: 1 1 520px; }
+.eyebrow { margin: 0 0 4px; font: 600 12px/1.2 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--bark); }
+h1 { margin: 0; font: 800 clamp(30px, 4.4vw, 50px)/1.02 var(--f-display); letter-spacing: -0.02em; text-wrap: balance; }
+.byline { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); }
+.intro-grid { margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 32px; max-width: 70ch; }
+.intro-grid p { margin: 0; min-width: 0; }
+@media (min-width: 1100px) { .intro-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1180px; } }
+.intro { font-size: 16.5px; line-height: 1.55; color: var(--ink); }
+.lede { color: var(--muted); font-size: 15.5px; line-height: 1.55; }
+.top a { color: var(--link); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; font-weight: 500; }
+.top a:hover { text-decoration-thickness: 2px; }
+/* narrow screens: the four-column next-steps table becomes one card per topic */
+@media (max-width: 700px) {
+  .nexttable thead { display: none; }
+  .nexttable, .nexttable tbody, .nexttable tr, .nexttable td { display: block; width: 100%; }
+  .nexttable tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .mini.nexttable td { border: 0; padding: 2px 0; }
+  .nexttable td:first-child { font-weight: 600; }
+  .nexttable td:not(:first-child)::before { content: attr(data-label) ': '; color: var(--muted); font-size: 13px; }
+}
+.outcomes { margin: 14px 0 0; max-width: 100ch; font-size: 14.5px; color: var(--muted); }
+.disclose { margin: 14px 0 0; max-width: 100ch; font-size: 13px; font-style: italic; color: var(--muted); }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 7px 14px; cursor: pointer; font-size: 14px; }
+.btn:hover { border-color: var(--faint); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; margin: 18px 0 12px; border-bottom: 1px solid var(--line); }
+.tab { border: 0; background: none; padding: 10px 14px 9px; cursor: pointer; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--kernel); }
+.tab small { font: 400 12px var(--f-mono); color: var(--faint); margin-left: 6px; }
+
+/* stage */
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+@media (max-width: 1080px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.main { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.toolbar { display: flex; gap: 10px 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.group > .lbl { font-size: 13px; color: var(--muted); margin-right: 2px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-size: 13.5px; cursor: pointer; }
+.chip code { font-family: var(--f-mono); font-size: 12.5px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.ctl { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn:disabled { opacity: .45; cursor: default; }
+.pathform { display: flex; gap: 6px; align-items: center; }
+.pathform input { font-family: var(--f-mono); font-size: 13.5px; width: 230px; max-width: 52vw; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+
+.caption { display: flex; gap: 12px; align-items: baseline; min-height: 54px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.cap-step { flex: none; border: 0; background: none; padding: 0; cursor: pointer; font: 600 12.5px var(--f-mono); color: var(--kernel); white-space: nowrap; text-decoration: underline dotted; text-underline-offset: 3px; }
+.cap-step:disabled { cursor: default; text-decoration: none; color: var(--faint); }
+.cap-text { min-width: 0; font-size: 15.5px; }
+.cap-text code, .detail code, .lede code { font-family: var(--f-mono); font-size: .9em; background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 1px 5px; border-radius: 4px; }
+.files { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: var(--muted); min-height: 26px; }
+.pathchip { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 2px 8px; font: 12.5px var(--f-mono); cursor: pointer; color: var(--ink); }
+.pathchip:hover { border-color: var(--c-dev); color: var(--c-dev); }
+
+.diagram { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--sky1), var(--sky2)); }
+.diagram svg { display: block; width: 100%; min-width: 820px; height: auto; }
+/* below ~860px the 820px diagram scrolls sideways: say so, and give touch targets more room */
+.swipehint { display: none; }
+@media (max-width: 860px) {
+  .swipehint { display: block; margin: 0; }
+  .pathchip { min-height: 30px; padding: 5px 10px; }
+  .cap-step { min-height: 30px; }
+}
+@media (max-width: 520px) { .tab small { display: none; } .tab { padding: 10px 10px 9px; } }
+
+/* side column */
+.side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.termcard { background: var(--code-bg); border-color: var(--code-bg); color: var(--code-ink); padding: 0; overflow: hidden; }
+.termhead { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; font: 12px var(--f-mono); color: var(--code-dim); border-bottom: 1px solid color-mix(in srgb, var(--code-ink) 14%, transparent); }
+.term { margin: 0; padding: 12px 14px; font: 13px/1.6 var(--f-mono); white-space: pre-wrap; word-break: break-word; min-height: 132px; }
+.term .p { color: var(--code-cmd); }
+.term .c { color: var(--code-dim); }
+.term .cur { display: inline-block; width: 8px; height: 15px; background: var(--code-ink); vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.detail h2 { margin: 2px 0 6px; font: 800 24px/1.1 var(--f-display); text-wrap: balance; }
+.detail h3 { margin: 14px 0 6px; font: 600 11.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.detail p { margin: 0 0 6px; }
+.d-eye { font: 600 11.5px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.d-eye i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.d-meta { color: var(--muted); font-size: 14px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pills li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+.tries { margin: 0; padding: 10px 12px; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; font: 12.5px/1.7 var(--f-mono); white-space: pre-wrap; word-break: break-word; }
+.tries .p { color: var(--code-cmd); }
+.tries .c { color: var(--code-dim); }
+.note { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--gold); background: color-mix(in srgb, var(--gold) 10%, transparent); font-size: 13.5px; border-radius: 0 6px 6px 0; }
+.hint { font-size: 13px; color: var(--faint); margin: 8px 0 0; }
+
+.top > .topctl { display: flex; gap: 8px; align-items: center; flex: none; margin-left: auto; }
+.share-menu { position: relative; }
+.share-menu summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); transition: border-color .2s, color .2s; }
+.share-menu summary::-webkit-details-marker { display: none; }
+.share-menu summary:hover, .share-menu[open] summary { border-color: var(--kernel); color: var(--kernel); }
+.share-menu-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 150px; padding: 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); box-shadow: 0 8px 24px rgba(0,0,0,.18); display: flex; flex-direction: column; }
+.share-menu-panel a, .share-menu-panel button { text-align: left; font-size: 14px; padding: 6px 10px; border-radius: 6px; color: var(--ink); background: none; border: 0; cursor: pointer; text-decoration: none; }
+.share-menu-panel a:hover, .share-menu-panel button:hover { background: var(--bg); color: var(--kernel); }
+.share-row { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+.share-lbl { font: 600 11.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.share-pill { font-size: 13px; font-weight: 500; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); text-decoration: none; cursor: pointer; transition: border-color .2s; }
+.share-pill:hover { border-color: var(--kernel); }
+footer a { color: var(--link); }
+footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; }
+
+/* SVG */
+svg text { font-family: var(--f-body); }
+.t-title { font: 700 15px var(--f-display); }
+.t-big { font: 800 19px var(--f-display); }
+.t-kernel { font: 800 26px var(--f-display); }
+.t-sub { font-size: 12.5px; }
+.t-mono { font-family: var(--f-mono); font-size: 12px; }
+.t-rail-k { font: 600 10.5px var(--f-mono); letter-spacing: .12em; }
+.t-rail-t { font: 700 14px var(--f-display); }
+.t-rail-n { font-size: 11.5px; }
+.t-credit { font: 600 13.5px var(--f-body); letter-spacing: .01em; }
+.t-credit-sub { font: 500 11px var(--f-body); letter-spacing: .04em; }
+.credit { pointer-events: none; }
+.t-dir { font: 600 16px var(--f-mono); }
+.node { cursor: pointer; transform-box: fill-box; transform-origin: center; transition: transform .25s ease; outline: none; }
+.node .face { transition: stroke-width .2s, filter .25s; }
+.node:hover .face, .node:focus-visible .face { stroke: var(--focus) !important; stroke-width: 2.5; }
+.node.visited .ring { opacity: 1; }
+.node.active { transform: scale(1.05); }
+.node.active .face { filter: drop-shadow(0 0 10px var(--glow)) drop-shadow(0 0 3px var(--glow)); }
+.node.selected .sel { opacity: 1; }
+.ring, .sel { fill: none; opacity: 0; transition: opacity .3s; pointer-events: none; }
+.ring { stroke: var(--gold); stroke-width: 2.5; }
+.sel { stroke: var(--focus); stroke-width: 2; stroke-dasharray: 5 4; }
+.subchip { cursor: pointer; outline: none; }
+.subchip rect { fill: rgba(40,6,0,.28); stroke: rgba(255,255,255,.45); stroke-width: 1; transition: fill .2s, stroke .2s; }
+.subchip text { fill: #ffffff; font-weight: 600; transition: fill .2s; }
+.subchip:hover rect, .subchip:focus-visible rect { fill: rgba(255,255,255,.22); stroke: #ffffff; }
+.subchip.active rect, .subchip.selected rect { fill: #ffffff; stroke: #ffffff; stroke-width: 1.5; }
+.subchip.active text, .subchip.selected text { fill: var(--kernel2); }
+.subchip.active rect { filter: drop-shadow(0 0 6px rgba(255,255,255,.75)); }
+.branch { fill: none; stroke: var(--bark); stroke-linecap: round; }
+.sap { fill: none; stroke: var(--sap); stroke-linecap: round; stroke-dasharray: 2 16; opacity: .7; animation: flow 1.6s linear infinite; }
+.trail { fill: none; stroke-width: 3.2; stroke-dasharray: 9 7; stroke-linecap: round; animation: flow 1s linear infinite; opacity: .95; transition: opacity .4s; }
+.trail.old { opacity: .38; }
+@keyframes flow { to { stroke-dashoffset: -32; } }
+.paused .sap, .paused .trail { animation-play-state: paused; }
+.token { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sap, .trail, .term .cur { animation: none; }
+  .node, .node .face { transition: none; }
+}
+
+/* story tab */
+.story { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 900px) { .story { grid-template-columns: minmax(0, 1fr); } .toc { position: static !important; } }
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); font-size: 14px; }
+.toc-h { margin: 4px 0 8px; font: 600 11.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 900px) { .toc ol { flex-direction: row; flex-wrap: wrap; gap: 6px; } .toc ol a { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; align-items: center; min-height: 32px; } }
+.toc a { display: flex; gap: 10px; color: var(--ink); text-decoration: none; padding: 4px 8px; border-radius: 6px; }
+.toc a:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.toc a span { font: 12px var(--f-mono); color: var(--faint); padding-top: 1px; }
+.tale { min-width: 0; max-width: 820px; display: flex; flex-direction: column; gap: 14px; }
+.tale-head h2 { margin: 0; font: 800 clamp(26px, 3.4vw, 38px)/1.05 var(--f-display); letter-spacing: -0.01em; }
+.chapter { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; scroll-margin-top: 16px; }
+.chapter > * { max-width: 72ch; }
+.chapter h3 { margin: 2px 0 10px; font: 800 24px/1.15 var(--f-display); text-wrap: balance; }
+.chapter p { margin: 0 0 12px; }
+.chapter code { font-family: var(--f-mono); font-size: .88em; background: color-mix(in srgb, var(--ink) 7%, transparent); padding: 1px 5px; border-radius: 4px; }
+.when { font: 600 12px var(--f-mono) !important; letter-spacing: .08em; text-transform: uppercase; color: var(--bark); margin-bottom: 2px !important; }
+.sub { font-size: 13.5px; color: var(--muted); margin-top: -4px !important; }
+.tblock { max-width: none !important; margin: 0 0 14px; padding: 12px 14px; background: var(--code-bg); color: var(--code-ink); border-radius: 10px; font: 13px/1.6 var(--f-mono); overflow-x: auto; white-space: pre; }
+.tblock .p { color: var(--code-cmd); }
+.tblock .c { color: var(--code-dim); }
+.why { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--leaf) 10%, transparent); border: 1px solid color-mix(in srgb, var(--leaf) 30%, transparent); }
+.facts { margin: 0 0 12px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.flow { max-width: none !important; display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px 4px; margin: 4px 0 14px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; background: color-mix(in srgb, var(--sky2) 50%, transparent); }
+.fstep { display: flex; flex-direction: column; gap: 1px; padding: 5px 10px 6px; border-radius: 8px; border: 1.5px solid var(--fc); background: color-mix(in srgb, var(--fc) 11%, var(--panel)); min-width: 0; }
+.fstep b { font: 600 9.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--fc); }
+.fstep span { font-size: 13.5px; font-weight: 500; }
+.farrow { align-self: center; color: var(--faint); font-size: 15px; }
+.flowpair .lbl { margin: 6px 0 4px; font: 600 12px var(--f-mono); color: var(--muted); }
+.flowpair .flow { margin-bottom: 8px; }
+.acts { max-width: none !important; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 4px; }
+.acts .files { min-height: 0; }
+.showme { border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 14px; cursor: pointer; background: var(--ink); color: var(--bg); }
+.showme::before { content: "▶ "; font-size: 11px; }
+.showme.alt { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+.showme.alt::before { content: ""; }
+.mini { max-width: none !important; width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 14px; display: block; overflow-x: auto; }
+.mini th { text-align: left; font: 600 11px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.mini td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.mini .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
+.mini .tsplit { font: 600 11px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding-top: 14px; }
+.mini a { color: var(--c-dev); }
+.scope { margin: 12px 0 0; max-width: 72ch; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; font-size: 14.5px; color: var(--muted); background: var(--panel); }
+.deeper { max-width: 72ch; margin: 0 0 14px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.deeper summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+.deeper[open] summary { margin-bottom: 8px; }
+.deeper p { margin: 0 0 10px; }
+.farrow { line-height: 1; align-self: center; }
+.flow { align-items: flex-start; }
+.farrow.dashed { display: inline-flex; align-items: center; height: 15px; }
+.farrow.dashed svg { width: 24px; height: 10px; min-width: 0; flex: none; display: block; }
+.pathlbl { font: 600 11px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.backbtn { border-color: var(--kernel); color: var(--kernel); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Interactive tutorial</p>
+      <h1>How Linux Works: An Upside-Down Tree</h1>
+      <p class="byline">MD Shakhaowat Hossain · Tulane University</p>
+      <div class="intro-grid">
+        <p class="intro">As biomedical researchers, we often run analyses on Linux, whether on a high-performance computing (HPC) cluster or in the cloud. I created this tutorial to make Linux more approachable by connecting its underlying structure to the commands and applications we use in our research.</p>
+        <p class="lede">The tutorial uses an upside-down tree as a visual metaphor: the roots represent the hardware, the trunk the kernel, the branches the system services and tools, and the leaves the applications we use. Together, these layers offer a simplified view of how the system fits together.</p>
+        <p class="lede">Click any part of the tree to explore its role, or follow a task as it moves through the layers. New to the terminal? Begin with <a href="#story" data-view="story">the story</a>, which follows a researcher through a day of real work at the command line.</p>
+      </div>
+      <p class="outcomes"><b>Level:</b> introductory and conceptual, for researchers new to Linux. After this tutorial you should be able to explain how a command travels from the shell through the kernel to the hardware and back; read paths, permissions and common error messages and place them on the tree; and recognize where research tools such as Python environments, SSH, Slurm and containers fit. It is not a hands-on course: <a href="#ch-next" data-view="story" data-goto="ch-next">Where to go next</a> lists the following steps.</p>
+      <p class="disclose">Development note: I used Claude Code to translate my ideas and technical knowledge into the interactive diagram and accompanying stories. Feedback on clarity, accuracy and usability is welcome.</p>
+    </div>
+    <div class="topctl">
+      <details class="share-menu">
+        <summary aria-label="Share this page" title="Share this page"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg></summary>
+        <div class="share-menu-panel" role="menu">
+          <a role="menuitem" data-share="linkedin" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a role="menuitem" data-share="bluesky" target="_blank" rel="noopener noreferrer">Bluesky</a>
+          <a role="menuitem" data-share="x" target="_blank" rel="noopener noreferrer">X</a>
+          <a role="menuitem" data-share="email">Email</a>
+          <button role="menuitem" type="button" data-copy-link>Copy link</button>
+        </div>
+      </details>
+      <button class="btn" id="themeBtn" type="button">Dark theme</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" id="tab-sys" aria-selected="true" aria-controls="stage" tabindex="0" type="button">The system<small>layers</small></button>
+    <button class="tab" role="tab" id="tab-fs" aria-selected="false" aria-controls="stage" tabindex="-1" type="button">The file system<small>/ and below</small></button>
+    <button class="tab" role="tab" id="tab-story" aria-selected="false" aria-controls="story" tabindex="-1" type="button">The story<small>a day with Linux</small></button>
+  </nav>
+
+  <section class="stage" id="stage" role="tabpanel" aria-labelledby="tab-sys">
+    <div class="main">
+      <div class="toolbar">
+        <div class="group" id="scenBar"><span class="lbl">Follow a real task:</span></div>
+        <form class="pathform" id="fsBar" hidden>
+          <label class="lbl" for="pathInput">Find a path:</label>
+          <input id="pathInput" type="text" value="/usr/bin/python3" spellcheck="false" autocomplete="off">
+          <button class="btn" type="submit">Locate</button>
+        </form>
+        <div class="ctl">
+          <button class="btn backbtn" id="backBtn" type="button" hidden>← Back to the story</button>
+          <button class="btn primary" id="playBtn" type="button">Play</button>
+          <button class="btn" id="prevBtn" type="button" aria-label="Previous step">← Previous</button>
+          <button class="btn" id="stepBtn" type="button" aria-label="Next step">Next →</button>
+          <button class="btn" id="restartBtn" type="button">Restart</button>
+        </div>
+      </div>
+      <div class="group" id="presetBar" hidden><span class="lbl">Try:</span></div>
+      <div class="caption" id="capBox" aria-live="polite">
+        <button class="cap-step" id="capStep" type="button" disabled>Ready</button>
+        <span class="cap-text" id="capText"></span>
+      </div>
+      <div class="files" id="files"></div>
+      <p class="hint diagnote" id="sysNote">Branches group related parts of the system; they are not required execution paths. Applications, tools, services and libraries can interact across groups, and each reaches the kernel through system calls.</p>
+      <p class="hint swipehint">Swipe sideways inside the diagram to see the whole tree. It scrolls to follow each animation step.</p>
+      <div class="diagram"><svg id="svg" viewBox="0 0 1216 1010" role="group" aria-label="Upside-down tree of the Linux operating system"></svg></div>
+    </div>
+
+    <aside class="side">
+      <div class="card termcard">
+        <div class="termhead"><span id="termTitle">bash</span><span id="termNote">example session</span></div>
+        <pre class="term" id="term"></pre>
+      </div>
+      <div class="card detail" id="detail"></div>
+    </aside>
+  </section>
+
+  <section class="story" id="story" role="tabpanel" aria-labelledby="tab-story" hidden>
+    <nav class="toc" aria-label="Chapters">
+      <p class="toc-h">A day inside the tree</p>
+      <ol>
+        <li><a href="#ch-boot"><span>08:30</span>Power on</a></li>
+        <li><a href="#ch-rule"><span>08:50</span>How commands reach the system</a></li>
+        <li><a href="#ch-login"><span>08:55</span>Logging in</a></li>
+        <li><a href="#ch-files"><span>09:10</span>Files and folders</a></li>
+        <li><a href="#ch-bash"><span>09:40</span>Bash, the glue</a></li>
+        <li><a href="#ch-apt"><span>10:15</span>Installing apps</a></li>
+        <li><a href="#ch-venv"><span>10:45</span>Virtual environments</a></li>
+        <li><a href="#ch-ssh"><span>11:30</span>SSH</a></li>
+        <li><a href="#ch-proc"><span>12:15</span>Health check</a></li>
+        <li><a href="#ch-hpc"><span>13:00</span>The HPC cluster</a></li>
+        <li><a href="#ch-ctr"><span>14:30</span>Docker and Apptainer</a></li>
+        <li><a href="#ch-ci"><span>16:00</span>CI/CD</a></li>
+        <li><a href="#ch-usb"><span>17:00</span>Backing up</a></li>
+        <li><a href="#ch-fix"><span>17:30</span>When things break</a></li>
+        <li><a href="#ch-map"><span>17:45</span>Map of the day</a></li>
+        <li><a href="#ch-next"><span>·</span>Where to go next</a></li>
+        <li><a href="#ch-refs"><span>·</span>Sources and scope</a></li>
+      </ol>
+    </nav>
+
+    <div class="tale">
+      <header class="tale-head">
+        <p class="eyebrow">The story</p>
+        <h2>A Day Inside the Tree</h2>
+        <p class="lede">Meet Safir, a research student in a genetics lab. Follow him through a working day at the terminal, from logging in to running jobs on a cluster. Along the way, see how commands connect applications, system tools, the kernel and hardware. Each chapter includes a <b>Watch it on the tree</b> button that animates the key interactions on the diagram.</p>
+        <p class="scope"><b>About this tutorial:</b> Safir uses an Ubuntu-based lab workstation with Bash and systemd. Commands, file locations and login methods may differ on other Linux distributions, HPC clusters and cloud systems. The tree is a simplified learning model, not a literal map of every interaction. The terminal sessions are illustrative: outputs were not all captured on one tested machine, and the research scripts are not included, so treat them as examples rather than a ready-to-run exercise (see <a href="#ch-refs">Sources and scope</a>).</p>
+      </header>
+
+      <article class="chapter" id="ch-boot">
+        <p class="when">08:30 · switching on</p>
+        <h3>The tree wakes up</h3>
+        <p>Before Safir types anything, Linux grows its tree from the roots up. Several startup steps prepare the system before he sees the login screen:</p>
+        <ol class="facts">
+          <li>The firmware finds the disk and starts <b>GRUB</b>, the boot loader, whose files live in <code>/boot</code>.</li>
+          <li>GRUB loads the kernel (<code>/boot/vmlinuz-…</code>) and an initial RAM file system (<code>/boot/initrd.img-…</code>) into memory.</li>
+          <li>The kernel initializes devices and loads the required drivers. Many devices, including disks and terminals, are represented by special files in <code>/dev</code>.</li>
+          <li>Programs in the initial RAM file system help locate the main disk and mount it as <code>/</code>. The kernel also provides <code>/proc</code> and <code>/sys</code>, folders that exist only in memory.</li>
+          <li>Once the real root file system is mounted, control passes to the main startup program, <code>/sbin/init</code>, process number 1. On Safir's workstation that is <b>systemd</b>.</li>
+          <li>systemd reads its settings in <code>/etc</code> and starts the services: networking, logging into <code>/var/log</code>, SSH, the login screen.</li>
+        </ol>
+        <div class="flow" data-flow="hw-ssd|firmware reads disk > boot|GRUB in /boot > kernel|kernel + initial RAM fs > k-drivers|devices in /dev > k-vfs|mount / > svc|/sbin/init = systemd > ext-users|login screen"></div>
+        <pre class="tblock">safir@genome01:~$ ls /boot
+config-6.8.0-45-generic  grub  initrd.img-6.8.0-45-generic  vmlinuz-6.8.0-45-generic
+safir@genome01:~$ ps -p 1 -o pid,comm
+    PID COMMAND
+      1 systemd
+safir@genome01:~$ ls -l /sbin/init
+lrwxrwxrwx 1 root root 20 Sep  3 10:12 /sbin/init -&gt; /lib/systemd/systemd</pre>
+        <p>Notice where <code>init</code> lives: <code>/sbin</code>. Historically, <code>/bin</code> held essential everyday commands such as <code>ls</code> and <code>cp</code>, while <code>/sbin</code> held system-administration tools such as <code>fsck</code> and <code>fdisk</code>. On many modern distributions both are symbolic links to locations under <code>/usr</code>. A command's location does not by itself determine who may run it.</p>
+        <p class="why"><b>Why it matters:</b> kernel updates need enough free space in <code>/boot</code>. If an update reports that it is full, contact the system administrator. On a personally managed Ubuntu system, use the package manager rather than deleting files by hand, and review the list of changes it proposes before you confirm.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="boot">Watch it on the tree</button><span class="files" data-paths="/boot/grub/grub.cfg /sbin /dev /proc /etc"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-rule">
+        <p class="when">08:50 · before the day starts</p>
+        <h3>How commands reach the system</h3>
+        <p>When a program needs an operating-system service, such as reading a file or starting another program, it asks the kernel through the <b>system call interface</b>. The kernel manages access to the resources involved. In the tree picture, the <b>leaves</b> (apps) and <b>branches</b> (shell, tools, libraries) rely on the <b>trunk</b> (the kernel), which manages the <b>roots</b> (CPU, memory, disk, network).</p>
+        <p>The diagram shows a typical path for a command that accesses a file. It highlights the important layers rather than every implementation detail.</p>
+        <div class="flow" data-flow="ext-users|You > shell|bash > tool-util|a program > lib|glibc > syscall|system call > kernel|kernel > hw-ssd|hardware"></div>
+        <p>The dashed red line on the diagram, the <b>system call interface</b>, is the border. Above it is kernel space, where the kernel manages the hardware. Below it is user space, where your programs run. Crossing it means asking politely, through one of a few hundred system calls such as <code>open</code>, <code>read</code>, <code>write</code> and <code>execve</code>.</p>
+        <pre class="tblock">safir@genome01:~$ strace -c ls
+# shows a summary table of the system calls ls made; the count varies
+safir@genome01:~$ strace ls 2&gt;&amp;1 | head
+# shows the individual calls, one per line</pre>
+        <p class="why"><b>Why it matters:</b> most chapters below follow a version of this path with different stops. Once you can picture it, error messages hint at which layer to check.</p>
+      </article>
+
+      <article class="chapter" id="ch-login">
+        <p class="when">08:55 · multi-user login</p>
+        <h3>Two people, one computer</h3>
+        <p>Safir and his labmate Omar share the lab workstation <code>genome01</code>. They log in at the same time. Linux was built for this from day one.</p>
+        <pre class="tblock">safir@genome01:~$ whoami
+safir
+safir@genome01:~$ id
+uid=1001(safir) gid=1001(safir) groups=1001(safir),27(sudo),1005(hla-lab)
+safir@genome01:~$ who
+safir    pts/0        2026-10-12 08:55
+omar     pts/1        2026-10-12 08:57
+safir@genome01:~$ pwd
+/home/safir</pre>
+        <p>When he typed his password, the login service checked who he is. On this workstation it uses an authentication framework called <b>PAM</b>. For a local password-based account, it looks him up in <code>/etc/passwd</code> (name, user ID, home folder, shell) and checks his password against the password hash stored in <code>/etc/shadow</code>, a file restricted to privileged access. After successful authentication, the login service starts <b>bash</b> running with his user and group identities, user ID <b>1001</b>. The kernel uses those identities when enforcing access permissions, so every file he touches is checked against that number.</p>
+        <div class="flow" data-flow="ext-users|password > svc|login service + PAM > hw-ssd|/etc/passwd, /etc/shadow > shell|bash as uid 1001 > k-sec|kernel checks uid"></div>
+        <p>Curious, he peeks into Omar's folder:</p>
+        <pre class="tblock">safir@genome01:~$ ls /home/omar
+ls: cannot open directory '/home/omar': Permission denied
+safir@genome01:~$ ls -ld /home/omar
+drwx------ 12 omar omar 4096 Oct 12 08:57 /home/omar</pre>
+        <p>Read <code>drwx------</code> in groups of three: <code>d</code> = directory, then <code>rwx</code> = the owner may read, write and enter, then <code>---</code> = the group gets nothing, then <code>---</code> = everyone else gets nothing. It was the kernel's security check that said no, not <code>ls</code>.</p>
+        <p>One account, <b>root</b> (user 0), has full administrative privileges. Safir's workstation is configured to allow members of the <code>sudo</code> group to run authorized commands with elevated privileges, so he can borrow those powers for one command with <code>sudo</code>. Which commands are permitted, and how their use is logged, depends on the system's sudo policy.</p>
+        <p class="why"><b>Why it matters:</b> "Permission denied" is not a bug. It is the trunk doing its job. <code>ls -l</code> and <code>id</code> tell you who owns what and who you are.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="login">Watch it on the tree</button><span class="files" data-paths="/etc/passwd /etc/shadow /home/safir /root"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-files">
+        <p class="when">09:10 · creating files and folders</p>
+        <h3>A home for the project</h3>
+        <pre class="tblock">safir@genome01:~$ mkdir -p ~/projects/hla-study/{data,scripts,results}
+safir@genome01:~$ cd ~/projects/hla-study
+safir@genome01:~/projects/hla-study$ echo "sample,allele" &gt; data/samples.csv
+safir@genome01:~/projects/hla-study$ touch scripts/clean.py
+safir@genome01:~/projects/hla-study$ tree
+.
+├── data
+│   └── samples.csv
+├── results
+└── scripts
+    └── clean.py</pre>
+        <p>Bash first expands <code>~</code> into Safir's home-directory path (<code>/home/safir</code>) and <code>{data,scripts,results}</code> into three directory names. The <code>mkdir</code> program then asks the kernel to create those directories, typically through the C library (glibc). The kernel checks access permissions and passes the request to the file system, ext4 on this workstation.</p>
+        <div class="flow" data-flow="ext-users|You > shell|expands ~ and {…} > tool-util|mkdir > lib|glibc mkdir() > k-sec|may he write? > k-vfs|ext4 adds entries > hw-ssd|SSD"></div>
+        <p>A surprise: the kernel first keeps the change in RAM (the page cache) and writes it to disk a moment later. That is why an unexpected power loss can lose the last few seconds of work, and why <code>sync</code> exists.</p>
+        <ul class="facts">
+          <li>Unlike deleting through many desktop file managers, <code>rm</code> normally does not move files to a trash folder. Treat it as permanent deletion.</li>
+          <li>Names starting with a dot, like <code>.bashrc</code>, are hidden. See them with <code>ls -a</code>.</li>
+          <li><code>/tmp</code> is temporary storage and may be cleared automatically or at reboot. Do not use it for results you need to keep.</li>
+          <li><code>df -h</code> shows used and available space on mounted file systems (a file system can sit on a disk partition, a logical volume, a network server or memory). <code>du -sh *</code> shows which files and directories are using the most space.</li>
+          <li>On a shared research system, follow your institution's guidance on project storage, scratch space and backups.</li>
+        </ul>
+        <p class="why"><b>Why it matters:</b> your files live in <code>/home</code> (yours), shared programs in <code>/usr</code> (read-only for you), scratch in <code>/tmp</code>. Knowing this tells you where to look, and where never to save.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="mkdir">Watch it on the tree</button><span class="files" data-paths="/home/safir/projects /tmp /usr/bin/mkdir"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-bash">
+        <p class="when">09:40 · using bash</p>
+        <h3>Bash, the glue</h3>
+        <p>Safir has added 40,000 records to his sample table. He wants the three most frequently recorded HLA alleles in its second column, without opening a spreadsheet:</p>
+        <pre class="tblock">safir@genome01:~/projects/hla-study$ tail -n +2 data/samples.csv | cut -d, -f2 | sort | uniq -c | sort -nr | head -n 3
+    812 A*02:01
+    640 A*24:02
+    511 A*11:01</pre>
+        <p><code>tail -n +2</code> skips the header line. This example assumes a simple two-column file with one allele per row and no quoted fields containing commas.</p>
+        <p>Bash starts the programs and connects them into a <b>pipeline</b>: each program's standard output becomes the next program's standard input. The programs can run concurrently while the operating system schedules their work. Some stages, such as sorting, must collect all their input before producing results.</p>
+        <div class="flow" data-flow="tool-util|tail -n +2 > tool-util|cut > tool-util|sort > tool-util|uniq -c > tool-util|sort -nr > tool-util|head > ~hw-periph|terminal"></div>
+        <p class="sub">Solid arrows are kernel-managed pipes, not intermediate files that Safir must create. The dashed arrow is ordinary output to the terminal, not a pipe. <code>sort</code> may still use its own temporary files when its input exceeds the available sorting buffer.</p>
+        <p>How does Bash find <code>sort</code>? For an external command, it searches the directories in <code>PATH</code> in order, unless it already has a cached location. Bash also recognizes functions and built-in commands, so not every command comes from a file in a <code>PATH</code> directory:</p>
+        <pre class="tblock">safir@genome01:~/projects/hla-study$ printf '%s\n' "$PATH"
+/home/safir/.local/bin:/usr/local/bin:/usr/bin:/bin
+safir@genome01:~/projects/hla-study$ command -v sort
+/usr/bin/sort
+safir@genome01:~/projects/hla-study$ type cd sort
+cd is a shell builtin
+sort is /usr/bin/sort</pre>
+        <details class="deeper"><summary>Look deeper: shared libraries</summary>
+          <p>Even <code>sort</code> does not work alone. It borrows shared code from <code>/lib</code>, the System Libraries branch of the tree:</p>
+          <pre class="tblock">safir@genome01:~/projects/hla-study$ ldd /usr/bin/sort | grep libc
+	libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6</pre>
+        </details>
+        <p>He saves the pipeline as a reusable script:</p>
+        <pre class="tblock">safir@genome01:~$ cd ~/projects/hla-study
+safir@genome01:~/projects/hla-study$ cat scripts/top_alleles.sh
+#!/bin/bash
+# Usage: top_alleles.sh FILE [N]
+# Assumes a header and a simple, unquoted two-column CSV.
+
+tail -n +2 "$1" |
+  cut -d, -f2 |
+  sort |
+  uniq -c |
+  sort -nr |
+  head -n "${2:-10}"
+safir@genome01:~/projects/hla-study$ chmod +x scripts/top_alleles.sh
+safir@genome01:~/projects/hla-study$ ./scripts/top_alleles.sh data/samples.csv 3
+safir@genome01:~/projects/hla-study$ echo $?
+0</pre>
+        <p>The first line, <code>#!/bin/bash</code> (the "shebang"), tells the kernel which program should read the script. <code>chmod +x</code> switches on its "may run" permission. <code>echo $?</code> prints the previous command's <b>exit status</b>. Zero normally indicates success, while a nonzero value indicates an error or another command-specific condition. For a pipeline, Bash normally reports the last command's status, not the status of every stage. Automated workflows use exit codes to detect problems, as the CI chapter shows.</p>
+        <details class="deeper"><summary>Look deeper: checking every stage of a pipeline</summary>
+          <p><code>set -o pipefail</code> makes a pipeline fail if any stage fails. Use it with care when the pipeline ends in <code>head</code>: <code>head</code> may stop reading early, and the program before it can then receive a "broken pipe" signal that counts as a failure.</p>
+        </details>
+        <p class="why"><b>Why it matters:</b> "command not found" means Bash found no alias, function, built-in or file in a <code>PATH</code> directory with that name. <code>type name</code> shows what Bash would run instead. Personal shortcuts such as <code>alias ll='ls -lh'</code> go in <code>~/.bashrc</code>.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="pipe">Watch it on the tree</button><span class="files" data-paths="/usr/bin /home/safir/.bashrc"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-apt">
+        <p class="when">10:15 · installing an app</p>
+        <h3>Growing a new leaf</h3>
+        <pre class="tblock">safir@genome01:~$ sudo apt update
+[sudo] password for safir:
+Reading package lists... Done
+safir@genome01:~$ sudo apt install samtools
+Setting up samtools ...
+safir@genome01:~$ command -v samtools
+/usr/bin/samtools</pre>
+        <p>The first command refreshes the package information; it does not upgrade the installed software.</p>
+        <p>APT reads the configured software repositories under <code>/etc/apt/</code>, retrieves the required packages, and verifies them using signed repository metadata and package checksums. The package's files are installed in designated locations: the program in <code>/usr/bin</code>, its libraries in <code>/usr/lib</code>, its manual in <code>/usr/share/man</code>, its settings in <code>/etc</code>. The package manager records what was installed under <code>/var/lib/dpkg</code>. Removing a package later does not necessarily delete its configuration files or data you created.</p>
+        <div class="flow" data-flow="shell|sudo (root, once) > tool-pkg|apt > k-net|network stack > hw-nic|network card > ext-cloud|package mirror > k-vfs|unpack > hw-ssd|/usr/bin, /usr/lib, /etc"></div>
+        <table class="mini">
+          <thead><tr><th>Where software lives</th><th>Who puts it there</th><th>Usually needs administrator access?</th></tr></thead>
+          <tbody>
+            <tr><td><code>/usr/bin</code></td><td>the package manager (apt, dnf)</td><td>yes</td></tr>
+            <tr><td><code>/usr/local/bin</code></td><td>you, building from source</td><td>yes</td></tr>
+            <tr><td><code>/opt/&lt;vendor&gt;</code></td><td>vendor installers (Chrome, MATLAB)</td><td>yes</td></tr>
+            <tr><td><code>~/.local/bin</code></td><td>your own scripts; command-line tools installed with <code>pipx</code></td><td>no</td></tr>
+            <tr><td><code>~/venvs</code>, <code>~/miniconda3</code></td><td>virtual environments, conda</td><td>no</td></tr>
+          </tbody>
+        </table>
+        <p>On current Ubuntu releases the system Python is <b>externally managed</b>: <code>pip install</code> outside a virtual environment, even with <code>--user</code>, is refused so it cannot break packages apt installed. Project dependencies belong in a virtual environment, the next chapter.</p>
+        <p class="why"><b>Why it matters:</b> on a shared cluster, Safir normally cannot install system-wide packages. He first checks the software the institution already provides, then follows local guidance for user-managed environments and installations, such as the last two rows of the table.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="apt">Watch it on the tree</button><span class="files" data-paths="/etc/apt/sources.list.d/ubuntu.sources /usr/bin/samtools /var/lib/dpkg /opt"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-venv">
+        <p class="when">10:45 · Python virtual environment</p>
+        <h3>A private toolbox</h3>
+        <p>Safir's analysis was written and validated against pandas 2, so he keeps it below pandas 3 (the current major version) until he has tested the upgrade. Omar's older pipeline breaks with anything newer than pandas 1.5. If either of them upgraded the system-wide copy, the other's work would break. The fix is a <b>virtual environment</b>. On Ubuntu, venv support is a separate package, installed once by an administrator with <code>sudo apt install python3-venv</code> (or <code>python3-full</code>):</p>
+        <pre class="tblock">safir@genome01:~$ python3 -m venv ~/venvs/hla
+safir@genome01:~$ source ~/venvs/hla/bin/activate
+(hla) safir@genome01:~$ python -c "import sys; print(sys.executable)"
+/home/safir/venvs/hla/bin/python
+(hla) safir@genome01:~$ python -m pip install "pandas&gt;=2,&lt;3"
+(hla) safir@genome01:~$ deactivate
+safir@genome01:~$ command -v python3
+/usr/bin/python3</pre>
+        <p>A virtual environment is a directory containing its own Python environment and package-installation location (<code>lib/python3.x/site-packages</code>). Its Python executable may be a copy of, or a symbolic link to, the interpreter used to create it. Activating the environment places its <code>bin</code> directory at the <b>front of PATH</b>, sets environment-related variables, and usually changes the shell prompt. No administrator privileges are needed to create it in Safir's home directory. Conda environments work on a similar idea and can also bring their own copy of Python and C libraries.</p>
+        <p>Activation is convenient but not required. Safir can call the environment's Python directly:</p>
+        <pre class="tblock">safir@genome01:~/projects/hla-study$ ~/venvs/hla/bin/python scripts/clean.py</pre>
+        <div class="flow" data-flow="shell|activate edits PATH > app-dev|venv python > tool-pkg|pip > k-vfs|write to /home > hw-ssd|site-packages"></div>
+        <p class="why"><b>Why it matters:</b> when an import fails or a package version is unexpected, first check which Python interpreter is running. This confirms that the analysis is using the intended environment.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="venv">Watch it on the tree</button><span class="files" data-paths="/home/safir/venvs/hla /usr/bin/python3"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-ssh">
+        <p class="when">11:30 · SSH to a server</p>
+        <h3>A terminal on another computer</h3>
+        <p>The lab's big server, <code>hla-srv</code>, sits in a locked server room. Safir works on it from his laptop. First, a one-time key setup:</p>
+        <!--email_off--><pre class="tblock">safir@laptop:~$ ssh-keygen -t ed25519
+Enter passphrase (empty for no passphrase):
+Your identification has been saved in /home/safir/.ssh/id_ed25519
+Your public key has been saved in /home/safir/.ssh/id_ed25519.pub
+safir@laptop:~$ ssh-copy-id safir@hla-srv.example.edu</pre><!--/email_off-->
+        <p>He sets a passphrase, so a stolen key file is not enough on its own. On his first connection, Safir verifies the server's host-key fingerprint using information supplied by the lab's system administrator. SSH records the server's identity in <code>~/.ssh/known_hosts</code> and checks it on later connections.</p>
+        <p>Then, every day:</p>
+        <!--email_off--><pre class="tblock">safir@laptop:~$ ssh safir@hla-srv.example.edu
+safir@hla-srv:~$ hostname
+hla-srv</pre><!--/email_off-->
+        <p>The <code>ssh</code> client (a networking tool) uses a crypto library to encrypt the connection. The laptop's kernel sends packets through the network card to the server, on port 22 by default. On the server, the same tree in reverse: the network card, the kernel, then <b>sshd</b>, the SSH service, listening on port 22 (on recent Ubuntu, systemd starts it when the first connection arrives). During public-key authentication, the client proves that it can use Safir's private key. The server checks whether the matching public key is authorized for his account, typically through <code>~/.ssh/authorized_keys</code>. The private key is never sent to the server. Once he is authenticated, sshd starts bash there as safir.</p>
+        <div class="flow" data-flow="tool-net|ssh (laptop) > lib|crypto library > k-net|kernel network > hw-nic|network card > ext-net|campus network > svc|sshd (server) > shell|bash on hla-srv"></div>
+        <p class="sub">Two trees connected through a network.</p>
+        <ul class="facts">
+          <li><code>authorized_keys</code> (on the server) lists which user keys the server accepts. <code>known_hosts</code> (on the laptop) lists which server identities the client recognizes.</li>
+          <li>The private key <code>~/.ssh/id_ed25519</code> stays on the laptop. Only the <code>.pub</code> half goes to servers.</li>
+          <li>SSH refuses keys that others can read: <code>chmod 600 ~/.ssh/id_ed25519</code>.</li>
+          </ul>
+        <p>A shortcut in <code>~/.ssh/config</code> on the laptop saves typing:</p>
+        <pre class="tblock">Host lab
+    HostName hla-srv.example.edu
+    User safir</pre>
+        <pre class="tblock">safir@laptop:~$ ssh lab
+safir@laptop:~$ scp results.csv lab:~/
+safir@laptop:~$ rsync -av data/ lab:~/data/</pre>
+        <p class="why"><b>Why it matters:</b> <code>Permission denied (publickey)</code> means public-key authentication did not succeed. Check the username, the selected key, server authorization and relevant file permissions. <code>ssh -v</code> shows which authentication steps the client attempted.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="ssh">Watch it on the tree</button><span class="pathlbl">Laptop:</span><span class="files" data-paths="/home/safir/.ssh/id_ed25519 /home/safir/.ssh/config /home/safir/.ssh/known_hosts"></span><span class="pathlbl">Server:</span><span class="files" data-paths="/home/safir/.ssh/authorized_keys /etc/ssh/sshd_config"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-proc">
+        <p class="when">12:15 · checking on the machine</p>
+        <h3>Files that are not really files</h3>
+        <p>His script feels slow. Before lunch, Safir checks the machine's health:</p>
+        <pre class="tblock">safir@genome01:~$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:            62Gi        42Gi       2.1Gi       1.0Gi        19Gi        20Gi
+safir@genome01:~$ grep -E '^(MemTotal|MemFree|MemAvailable):' /proc/meminfo
+MemTotal:       65011712 kB
+MemFree:         2202008 kB
+MemAvailable:   20971520 kB
+safir@genome01:~$ ls -l /proc/meminfo
+-r--r--r-- 1 root root 0 Oct 12 12:15 /proc/meminfo</pre>
+        <p>Look at the size: <b>0 bytes</b>, yet it is full of numbers. <code>/proc</code> is a window into the kernel. Nothing in it is stored on disk; the kernel writes the answer at the moment you read it. <code>free</code>, <code>top</code> and <code>ps</code> are just friendly readers of <code>/proc</code>. Each process even gets its own folder, named after its process ID:</p>
+        <pre class="tblock">safir@genome01:~$ echo $$
+48211
+safir@genome01:~$ head -1 /proc/48211/status
+Name:	bash</pre>
+        <div class="flow" data-flow="tool-proc|free / top > lib|glibc read() > k-vfs|/proc, not a disk > k-mem|numbers made live > tool-proc|prints the table"></div>
+        <ul class="facts">
+          <li><code>/dev</code> is the hardware side of the same idea: <code>df -h /home</code> shows that the file system holding his files is on the partition <code>/dev/nvme0n1p2</code>.</li>
+          <li>Logs may be stored under <code>/var/log</code>; <code>journalctl</code> reads the systemd journal. <code>journalctl -p err --since today</code> lists today's errors.</li>
+        </ul>
+        <p>The system reports about 20 GiB of available memory, so this snapshot does not suggest immediate system-wide memory pressure. Safir next checks CPU activity with <code>top</code> and finds another job heavily using the machine. CPU contention is a possible explanation for the slowdown, but he would need further checks to confirm it.</p>
+        <p class="why"><b>Why it matters:</b> a bare "Killed" message does not identify the cause. Memory exhaustion is one possibility; a scheduler limit or another termination request may also be involved. Check the relevant logs and, on a cluster, the scheduler's job records.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="proc">Watch it on the tree</button><span class="files" data-paths="/proc/meminfo /proc/cpuinfo /dev /var/log"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-hpc">
+        <p class="when">13:00 · cloud and HPC over SSH</p>
+        <h3>Thousands of trees, one front door</h3>
+        <p>Based on earlier benchmarking, Safir requests 64 CPUs for his scoring workflow; his pandas code does not use a GPU, so he requests none. He logs in to the university cluster and, once, creates a Python environment there. The workstation environment at <code>~/venvs/hla</code> does not appear on another machine automatically.</p>
+        <!--email_off--><pre class="tblock">safir@laptop:~$ ssh safir@hpc.example.edu
+[safir@login1 ~]$ module load python/3.11
+[safir@login1 ~]$ python -m venv /work/safir/venvs/hla
+[safir@login1 ~]$ /work/safir/venvs/hla/bin/python -m pip install "pandas&gt;=2,&lt;3"
+[safir@login1 ~]$ cd /work/safir/hla-study
+[safir@login1 hla-study]$ cat run.sh
+#!/bin/bash
+# Partition, account and memory settings follow the cluster's documentation.
+#SBATCH --job-name=hla-score
+#SBATCH --partition=standard
+#SBATCH --account=hla-lab
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=128G
+#SBATCH --time=04:00:00
+cd /work/safir/hla-study
+module load python/3.11
+source /work/safir/venvs/hla/bin/activate
+python scripts/score.py --workers "$SLURM_CPUS_PER_TASK"
+[safir@login1 hla-study]$ sbatch run.sh
+Submitted batch job 812345
+[safir@login1 hla-study]$ squeue -u safir
+  JOBID  NAME       ST  TIME  NODES
+ 812345  hla-score  R   0:42  1</pre><!--/email_off-->
+        <p>The <b>login node</b> is the cluster's front door, shared by hundreds of people. It is for editing, copying and submitting, not for heavy work. <code>sbatch</code> hands the script to <b>Slurm</b>, whose scheduling service (<code>slurmctld</code>) waits until a <b>compute node</b> has the requested resources free. That node is another full Linux tree. Slurm allocates the resources; how strictly they are enforced depends on the cluster's configuration. Because the job sets <code>--cpus-per-task</code>, Slurm provides <code>SLURM_CPUS_PER_TASK</code> with that requested number, so the script passes it to <code>score.py</code> instead of repeating a hard-coded value. It describes this job's request, not the machine's total CPUs. Requesting CPUs does not by itself make a program parallel; the program has to use them.</p>
+        <div class="flow" data-flow="tool-net|ssh > shell|login node > app-data|sbatch > svc|slurmctld queue > ext-other|compute node > k-sched|resources allocated > hw-cpu|CPU cores"></div>
+        <ul class="facts">
+          <li>Modules configure the software environment, often updating <code>PATH</code> and other variables.</li>
+          <li>Partition, account and memory settings must follow local documentation. Requirements differ; some institutions require an explicit memory request.</li>
+          <li>Home-directory quotas and storage policies vary by institution. Large data, environments and model caches usually belong in project or scratch storage such as <code>/work</code> or <code>/scratch</code>.</li>
+          <li>Request GPUs only for GPU-enabled code. When a job does hold GPUs, they appear as device files such as <code>/dev/nvidia0</code>, and <code>nvidia-smi</code> on the compute node shows whether they are actually busy.</li>
+          <li>Cloud machines (AWS, Azure, Google Cloud) are reached the same way: <code>ssh</code> into a Linux VM.</li>
+        </ul>
+        <p class="why"><b>Why it matters:</b> heavy work on the login node may be stopped by administrators. A full home directory gives "Disk quota exceeded". A GPU waiting on a slow data loader wastes the allocation. These problems may involve system configuration, resource allocation or application behavior.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="hpc">Watch it on the tree</button><span class="files" data-paths="/home/safir /work/safir"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-ctr">
+        <p class="when">14:30 · containers</p>
+        <h3>Docker and Apptainer: a tree in a box</h3>
+        <p>A reviewer asks: "Can someone else rerun this analysis using the same software environment?" Safir packs the environment into a container image:</p>
+        <pre class="tblock">safir@laptop:~/hla-study$ cat Dockerfile
+FROM python:3.11-slim
+RUN pip install "pandas==2.2.*"
+COPY scripts/ /app/
+CMD ["python", "/app/score.py"]
+safir@laptop:~/hla-study$ docker build -t hla-score:1.0 .
+safir@laptop:~/hla-study$ docker run --rm -v "$PWD/data":/data hla-score:1.0
+safir@laptop:~$ uname -r
+6.8.0-45-generic
+safir@laptop:~$ docker run --rm python:3.11-slim uname -r
+6.8.0-45-generic
+# same kernel inside and outside the container</pre>
+        <p>That last line is the key idea. A container is <b>not a little computer</b>. It is ordinary processes that the host kernel wraps in <b>namespaces</b> (their own view of <code>/</code>, their own process list, their own network) and <b>cgroups</b> (which account for CPU and memory use, and enforce limits when you set them, for example with <code>--cpus</code> or <code>--memory</code>; the command above sets none). The container brings its own branches and leaves (<code>/usr</code>, <code>/lib</code>, Python, pandas) but borrows the host's trunk. A virtual machine brings its own trunk too.</p>
+        <div class="flowpair">
+          <p class="lbl">Container</p>
+          <div class="flow" data-flow="app-ctr|your app > lib|image's /usr, /lib > kernel|HOST kernel > hw-cpu|hardware"></div>
+          <p class="lbl">Virtual machine</p>
+          <div class="flow" data-flow="app-ctr|your app > lib|VM's /usr, /lib > kernel|VM's own kernel > -|virtual hardware > kernel|host kernel > hw-cpu|hardware"></div>
+        </div>
+        <p>Safir's laptop runs Docker Engine directly on Linux in its conventional mode: a background service, <code>dockerd</code>, runs as root (a rootless mode also exists). Docker keeps its data under <code>/var/lib/docker</code>; on fresh Docker Engine 29 and later installations, image contents and container snapshots live in <code>/var/lib/containerd</code> instead. A running container sees the image's read-only layers plus a thin <b>writable layer</b> of its own. <code>-v "$PWD/data":/data</code> mounts a real folder from his tree into the container's tree. Anything written to the writable layer, outside a mounted folder, vanishes when the container is removed.</p>
+        <p>The tag <code>1.0</code> is a convenient label, but a tag can later be moved to a different image. The image <b>digest</b> (<code>sha256:…</code>) identifies the exact content; a locally built image gets its registry digest when it is pushed, and <code>docker push</code> prints it. Rebuilding later from <code>python:3.11-slim</code> and <code>pandas==2.2.*</code> could pull in newer versions, so Safir publishes the built image to the lab's registry and records its digest with his results.</p>
+        <pre class="tblock">safir@laptop:~/hla-study$ docker tag hla-score:1.0 registry.example.edu/hla-lab/hla-score:1.0
+safir@laptop:~/hla-study$ docker push registry.example.edu/hla-lab/hla-score:1.0</pre>
+        <p>On the cluster, Docker's root service is not allowed. <b>Apptainer</b> fills the gap: no background service, the image is one <code>.sif</code> file, and he stays himself (uid 1001) inside. He pulls the image by the digest he recorded (replace the placeholder with that value), so he gets exactly the content he tested, then runs the analysis in a scheduled job on a compute node, not on the login node:</p>
+        <pre class="tblock">[safir@login1 ~]$ DIGEST="sha256:&lt;digest printed by docker push&gt;"
+[safir@login1 ~]$ apptainer pull /work/safir/hla-score_1.0.sif "docker://registry.example.edu/hla-lab/hla-score@$DIGEST"
+[safir@login1 ~]$ cat run_container.sh
+#!/bin/bash
+#SBATCH --job-name=hla-score-ctr
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=128G
+#SBATCH --time=04:00:00
+cd /work/safir/hla-study
+apptainer exec /work/safir/hla-score_1.0.sif python /app/score.py --workers "$SLURM_CPUS_PER_TASK"
+[safir@login1 ~]$ sbatch run_container.sh</pre>
+        <p>This job uses CPUs only, because pandas does not use a GPU. For a GPU-enabled application, he would add <code>#SBATCH --gres=gpu:1</code> and <code>apptainer exec --nv</code>: <code>--nv</code> makes NVIDIA devices and host driver libraries available inside the container, but neither the request nor the flag makes ordinary code use a GPU. His home directory is usually available inside the container; other paths depend on the cluster's configuration. Some clusters also ask users to pull or build images inside a job.</p>
+        <p class="why"><b>Why it matters:</b> once you know containers share the kernel, the puzzles disappear: why a Linux container cannot run Windows, why results must go to a mounted folder, and why <code>--nv</code> is needed to see the GPU.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="docker">Watch it on the tree</button><span class="files" data-paths="/var/lib/docker /var/lib/containerd /dev/kvm"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-ci">
+        <p class="when">16:00 · DevOps CI/CD</p>
+        <h3>Robots that use Linux the same way</h3>
+        <p>Safir pushes his code. Tests run on their own:</p>
+        <pre class="tblock">safir@laptop:~/hla-study$ git push origin main
+safir@laptop:~/hla-study$ cat .github/workflows/test.yml
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest
+      - run: docker build -t hla-score:ci .</pre>
+        <p>GitHub starts a <b>fresh Ubuntu virtual machine</b> in the cloud, called a <b>runner</b>. A runner service on it reads the YAML file and runs the steps in order. <code>setup-python</code> installs Python 3.11, matching the container (3.11 is older but still receives security fixes until October 2027). Each <code>run</code> step starts a new noninteractive shell, and GitHub records the exit status of each step. If every step succeeds, the run gets a green check; a nonzero exit code fails that step, marks the run with a red X and stops the remaining steps. This workflow covers <b>testing and building</b>. The tests run in the runner’s Python, not inside the image, so they do not show that the image itself works; a further step could run the tests in a container started from it. Deployment, the "CD" half, would need extra steps: push the image to a registry, or connect to a server and restart a service. On that web server, the site often lives in <code>/srv/www</code>: <code>/srv</code> is the folder set aside for data a machine <i>serves</i> to others.</p>
+        <div class="flow" data-flow="ext-users|git push > ext-cloud|GitHub > svc|runner service > shell|shell per step > tool-pkg|python -m pip install > app-dev|python -m pytest > app-ctr|docker build > ext-users|exit 0 → green"></div>
+        <p class="why"><b>Why it matters:</b> a CI log is just a terminal you didn't type into. When it turns red, you debug it with everything above: <code>PATH</code>, permissions, packages, exit codes.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="cicd">Watch it on the tree</button><span class="files" data-paths="/srv /var/lib/docker"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-usb">
+        <p class="when">17:00 · backing up</p>
+        <h3>Plugging in: /dev, /media and /mnt</h3>
+        <p>Before going home, Safir copies his results to a USB drive.</p>
+        <pre class="tblock">safir@genome01:~$ lsblk -o NAME,SIZE,MOUNTPOINTS
+NAME          SIZE MOUNTPOINTS
+nvme0n1       1.8T
+└─nvme0n1p2   1.8T /
+sdb           128G
+└─sdb1        128G /media/safir/BACKUP
+safir@genome01:~$ rsync -av ~/projects/hla-study/results/ /media/safir/BACKUP/results/
+safir@genome01:~$ udisksctl unmount -b /dev/sdb1</pre>
+        <p><code>/dev/sdb1</code> identifies a partition; <code>/media/safir/BACKUP</code> is the directory where its file system is <b>mounted</b>, meaning attached to the tree, so its files look like any other folder. The desktop did that automatically, which is what <code>/media</code> is for: removable things.</p>
+        <p><code>/mnt</code> is the do-it-yourself spot. His supervisor attaches the lab's network share by hand:</p>
+        <pre class="tblock">safir@genome01:~$ sudo mkdir -p /mnt/labshare
+safir@genome01:~$ sudo mount -t nfs nas.example.edu:/lab /mnt/labshare</pre>
+        <div class="flow" data-flow="hw-periph|USB drive > k-drivers|/dev/sdb1 > svc|udev + udisks > k-vfs|mount at /media/safir/BACKUP > tool-util|rsync copies"></div>
+        <p class="why"><b>Why it matters:</b> remember the RAM cache from 09:10? Unmount before pulling the drive, or the last files may never reach it. "Target is busy" means a process is still using the file system, for example through an open file or a working directory. Close those references, then retry.</p>
+        <div class="acts"><button class="showme" type="button" data-scen="usb">Watch it on the tree</button><span class="files" data-paths="/dev/sdb1 /media/safir/BACKUP /mnt"></span></div>
+      </article>
+
+      <article class="chapter" id="ch-fix">
+        <p class="when">17:30 · wrapping up</p>
+        <h3>When something breaks, find the layer</h3>
+        <p>An error message provides clues about which layer to investigate first. Some problems cross several layers, so use the tree to organize your checks rather than assume the cause.</p>
+        <table class="mini errs">
+          <thead><tr><th>You see</th><th>Layer on the tree</th><th>First thing to try</th></tr></thead>
+          <tbody>
+            <tr><td><code>command not found</code></td><td><i class="dot" style="background:var(--shell)"></i>Shell (PATH)</td><td><code>type name</code>, <code>printf '%s\n' "$PATH"</code></td></tr>
+            <tr><td><code>Permission denied</code></td><td><i class="dot" style="background:var(--kernel)"></i>Kernel security</td><td><code>ls -l file</code>, <code>id</code></td></tr>
+            <tr><td><code>No such file or directory</code></td><td><i class="dot" style="background:var(--kernel)"></i>File system</td><td><code>pwd</code>, <code>ls</code>; names are case-sensitive</td></tr>
+            <tr><td><code>No space left on device</code></td><td><i class="dot" style="background:var(--bark)"></i>Storage</td><td><code>df -h</code> and <code>df -i</code>, then <code>du -sh * | sort -h</code></td></tr>
+            <tr><td><code>Disk quota exceeded</code></td><td><i class="dot" style="background:var(--bark)"></i>Storage (quota)</td><td>the institution's user or project quota tools</td></tr>
+            <tr><td><code>Killed</code></td><td><i class="dot" style="background:var(--kernel)"></i>Process forcibly terminated; investigate the cause</td><td><code>free -h</code>, system logs; on clusters, <code>sacct -j JOBID</code></td></tr>
+            <tr><td><code>Connection refused</code> / timed out</td><td><i class="dot" style="background:var(--svc)"></i>Network or service</td><td><code>ssh -v host</code>, then <code>systemctl status sshd</code> on the server</td></tr>
+            <tr><td><code>Permission denied (publickey)</code></td><td><i class="dot" style="background:var(--tool)"></i>SSH keys</td><td>username, key, <code>ls -l ~/.ssh</code>, <code>ssh -v host</code></td></tr>
+            <tr><td><code>ModuleNotFoundError</code></td><td><i class="dot" style="background:var(--leaf)"></i>Module unavailable to the active interpreter</td><td><code>python -c "import sys; print(sys.executable)"</code>, activate the intended venv</td></tr>
+            <tr><td>A service silently stops</td><td><i class="dot" style="background:var(--svc)"></i>Services</td><td><code>journalctl -u name</code>, <code>/var/log</code></td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="chapter" id="ch-map">
+        <p class="when">17:45 · closing the laptop</p>
+        <h3>The map of the day</h3>
+        <p>In one day Safir used every layer of the tree: logins checked at the trunk, files written to the roots, tools on the branches, apps as leaves, and other trees reached through the network. Along the way, he encountered many common directories in the Linux filesystem hierarchy. Here is where each one showed up:</p>
+        <table class="mini">
+          <thead><tr><th>Directory</th><th>What it holds</th><th>When Safir used it</th></tr></thead>
+          <tbody>
+            <tr><td><code>/</code></td><td>the top of everything</td><td><a href="#ch-rule">all day</a></td></tr><tr><td><code>/bin</code></td><td>everyday commands: ls, cp, grep</td><td><a href="#ch-bash">09:40</a></td></tr><tr><td><code>/boot</code></td><td>the kernel and the GRUB boot loader</td><td><a href="#ch-boot">08:30</a></td></tr><tr><td><code>/dev</code></td><td>hardware shown as files</td><td><a href="#ch-boot">08:30</a>, <a href="#ch-proc">12:15</a>, <a href="#ch-usb">17:00</a></td></tr><tr><td><code>/etc</code></td><td>system settings, as plain text</td><td><a href="#ch-login">08:55</a>, <a href="#ch-apt">10:15</a></td></tr><tr><td><code>/home</code></td><td>one personal folder per user</td><td><a href="#ch-login">08:55</a>, <a href="#ch-files">09:10</a>, <a href="#ch-venv">10:45</a></td></tr><tr><td><code>/lib</code></td><td>shared libraries such as glibc</td><td><a href="#ch-bash">09:40</a></td></tr><tr><td><code>/media</code></td><td>removable drives, mounted for you</td><td><a href="#ch-usb">17:00</a></td></tr><tr><td><code>/mnt</code></td><td>file systems mounted by hand</td><td><a href="#ch-usb">17:00</a></td></tr><tr><td><code>/opt</code></td><td>add-on software from vendors</td><td><a href="#ch-apt">10:15</a></td></tr><tr><td><code>/sbin</code></td><td>administrator commands, and init</td><td><a href="#ch-boot">08:30</a></td></tr><tr><td><code>/srv</code></td><td>data this machine serves to others</td><td><a href="#ch-ci">16:00</a></td></tr><tr><td><code>/tmp</code></td><td>temporary storage, may be cleared automatically</td><td><a href="#ch-files">09:10</a></td></tr><tr><td><code>/usr</code></td><td>most installed software</td><td><a href="#ch-bash">09:40</a>, <a href="#ch-apt">10:15</a></td></tr><tr><td><code>/proc</code></td><td>live numbers from the kernel</td><td><a href="#ch-proc">12:15</a></td></tr>
+            <tr><td><code>/var</code></td><td>logs, package receipts, Docker images</td><td><a href="#ch-login">08:55</a>, <a href="#ch-apt">10:15</a>, <a href="#ch-ctr">14:30</a></td></tr><tr><td><code>/root</code></td><td>the root user’s own home (not the same as /)</td><td><a href="#ch-login">08:55</a></td></tr><tr><td><code>/run</code></td><td>runtime state since the last boot</td><td><a href="#ch-boot">08:30</a></td></tr><tr><td><code>/sys</code></td><td>the kernel’s view of devices and drivers</td><td><a href="#ch-boot">08:30</a></td></tr>
+          </tbody>
+        </table>
+        <p><b>Three details many cheat sheets simplify:</b></p>
+        <ul class="facts">
+          <li><code>/etc</code> comes from "et cetera". "Editable Text Configuration" is a later explanation that happens to fit.</li>
+          <li><code>/tmp</code> is not emptied when a program finishes. Most systems clear it at reboot, and some also delete files there after several days.</li>
+          <li><code>/bin</code>, <code>/sbin</code> and <code>/lib</code> are now usually shortcuts into <code>/usr</code>, so <code>/bin/ls</code> and <code>/usr/bin/ls</code> are the same file.</li>
+        </ul>
+        <p>Once you can see the tree, a path stops being a string of letters and becomes an address, and an error message stops being a wall and becomes a map.</p>
+        <div class="acts"><button class="showme alt" type="button" data-view="sys">Explore the full tree</button><button class="showme alt" type="button" data-view="fs">Explore the file system</button></div>
+      </article>
+
+      <article class="chapter" id="ch-next">
+        <h3>Where to go next</h3>
+        <p>This tutorial gives the picture; mastery comes from practice. The table maps a full Linux learning path for research computing onto what this page covers, with one official or well-established resource for each next step. For bioinformatics work, Bash, permissions, SSH, environments, Git, containers, a workflow manager and cluster jobs repay the effort first.</p>
+        <table class="mini nexttable">
+          <thead><tr><th>Topic</th><th>In this tutorial</th><th>Next step</th><th>Start with</th></tr></thead>
+          <tbody>
+            <tr><td data-label="Topic">Linux fundamentals</td><td data-label="In this tutorial">Introduced: the system's layers, paths, directories, everyday commands</td><td data-label="Next step">Links (<code>ln</code>), archives, <code>find</code>, reading <code>man</code> pages</td><td data-label="Start with"><a href="https://linuxcommand.org/tlcl.php">The Linux Command Line (free book)</a></td></tr>
+            <tr><td data-label="Topic">Bash scripting</td><td data-label="In this tutorial">Introduced: pipelines, <code>PATH</code>, a reusable script, exit status</td><td data-label="Next step">Loops, conditionals, functions, quoting, input checks</td><td data-label="Start with"><a href="https://www.gnu.org/software/bash/manual/">GNU Bash manual</a></td></tr>
+            <tr><td data-label="Topic">File systems and storage</td><td data-label="In this tutorial">Introduced: mounts, <code>df</code>, <code>du</code>, <code>lsblk</code>, a USB backup</td><td data-label="Next step">Compression and archives, hard links, backup and restore</td><td data-label="Start with"><a href="https://www.gnu.org/software/coreutils/manual/">GNU Coreutils</a>, <a href="https://www.gnu.org/software/tar/manual/">GNU tar</a></td></tr>
+            <tr><td data-label="Topic">Users, groups and permissions</td><td data-label="In this tutorial">Introduced: user and group IDs, permission bits, <code>sudo</code>, <code>chmod</code></td><td data-label="Next step"><code>chown</code>, <code>umask</code>, shared project folders, ACLs</td><td data-label="Start with"><a href="https://man7.org/linux/man-pages/man5/acl.5.html">acl(5)</a></td></tr>
+            <tr><td data-label="Topic">Processes and resources</td><td data-label="In this tutorial">Introduced: <code>ps</code>, <code>top</code>, <code>/proc</code>, stopping a process</td><td data-label="Next step">Signals, <code>tmux</code> and <code>nohup</code> for long jobs, priorities</td><td data-label="Start with"><a href="https://man7.org/linux/man-pages/man7/signal.7.html">signal(7)</a>, <a href="https://github.com/tmux/tmux/wiki">tmux</a></td></tr>
+            <tr><td data-label="Topic">Software and environments</td><td data-label="In this tutorial">Introduced: APT, Python venv, pip; Conda mentioned</td><td data-label="Next step">Conda or Mamba environments: export, recreate, pin versions</td><td data-label="Start with"><a href="https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">Conda: managing environments</a></td></tr>
+            <tr><td data-label="Topic">Boot and services</td><td data-label="In this tutorial">Introduced: boot sequence, systemd, the journal</td><td data-label="Next step">Starting, enabling and debugging services; unit files and timers</td><td data-label="Start with"><a href="https://www.freedesktop.org/software/systemd/man/latest/systemctl.html">systemctl</a></td></tr>
+            <tr><td data-label="Topic">Networking</td><td data-label="In this tutorial">Introduced: SSH, <code>scp</code>, <code>rsync</code>, DNS</td><td data-label="Next step">IP addresses, subnets, routing, ports, firewalls</td><td data-label="Start with"><a href="https://man7.org/linux/man-pages/man8/ip.8.html">ip(8)</a>, <a href="https://ubuntu.com/server/docs">Ubuntu Server docs</a></td></tr>
+            <tr><td data-label="Topic">Security</td><td data-label="In this tutorial">Introduced: SSH keys, host verification, permissions</td><td data-label="Next step">Firewalls, updates, audit logs, SELinux or AppArmor, encryption</td><td data-label="Start with"><a href="https://documentation.ubuntu.com/server/how-to/security/">Ubuntu Server security guides</a>, <a href="https://www.openssh.com/manual.html">OpenSSH manual</a></td></tr>
+            <tr><td data-label="Topic">Logging and troubleshooting</td><td data-label="In this tutorial">Introduced: a symptom-to-layer table, logs, exit status</td><td data-label="Next step">Practice a routine: reproduce, gather evidence, isolate, fix, verify</td><td data-label="Start with"><a href="https://www.freedesktop.org/software/systemd/man/latest/journalctl.html">journalctl</a></td></tr>
+            <tr><td data-label="Topic">Text processing</td><td data-label="In this tutorial">Introduced: one <code>cut</code>, <code>sort</code>, <code>uniq</code> pipeline</td><td data-label="Next step"><code>awk</code>, <code>sed</code>, regular expressions, <code>jq</code> for JSON</td><td data-label="Start with"><a href="https://www.gnu.org/software/gawk/manual/">GNU Awk</a>, <a href="https://www.gnu.org/software/sed/manual/">GNU sed</a>, <a href="https://jqlang.org/manual/">jq</a></td></tr>
+            <tr><td data-label="Topic">Version control and workflows</td><td data-label="In this tutorial">Mentioned: <code>git push</code> and a CI workflow</td><td data-label="Next step">Git basics: commits, branches, <code>.gitignore</code>; Nextflow or Snakemake</td><td data-label="Start with"><a href="https://git-scm.com/book/en/v2">Pro Git</a>, <a href="https://www.nextflow.io/docs/latest/">Nextflow</a>, <a href="https://snakemake.readthedocs.io/en/stable/tutorial/tutorial.html">Snakemake tutorial</a></td></tr>
+            <tr><td data-label="Topic">Cluster computing</td><td data-label="In this tutorial">Introduced: login and compute nodes, one Slurm job</td><td data-label="Next step">Job arrays, job dependencies, diagnosing failed jobs</td><td data-label="Start with"><a href="https://slurm.schedmd.com/job_array.html">Slurm job arrays</a></td></tr>
+            <tr><td data-label="Topic">Containers and virtualization</td><td data-label="In this tutorial">Introduced: images, digests, namespaces, cgroups, Apptainer, VMs</td><td data-label="Next step">Container storage and networking, security; Kubernetes (optional)</td><td data-label="Start with"><a href="https://docs.docker.com/get-started/">Docker</a>, <a href="https://apptainer.org/docs/user/latest/">Apptainer</a>, <a href="https://kubernetes.io/docs/tutorials/kubernetes-basics/">Kubernetes basics</a></td></tr>
+            <tr><td data-label="Topic">Cloud infrastructure</td><td data-label="In this tutorial">Mentioned: cloud Linux VMs, a hosted CI runner</td><td data-label="Next step">Accounts and access (IAM), object and block storage, networks, costs</td><td data-label="Start with"><a href="https://docs.aws.amazon.com/">AWS</a>, <a href="https://learn.microsoft.com/en-us/azure/">Azure</a>, <a href="https://cloud.google.com/docs">Google Cloud</a></td></tr>
+            <tr><td data-label="Topic">Kernel and performance</td><td data-label="In this tutorial">Concepts only: scheduler, memory, drivers, <code>/proc</code>, <code>/sys</code>, <code>strace</code></td><td data-label="Next step">Profiling, tuning, capacity planning (specialist)</td><td data-label="Start with"><a href="https://docs.kernel.org/admin-guide/">Kernel admin guide</a></td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="chapter" id="ch-refs">
+        <h3>Sources and scope</h3>
+        <p>The examples assume Ubuntu 24.04 LTS with Bash, systemd and Docker Engine on Linux, as of October 2026. The command outputs are illustrative and were not all captured on one tested machine, and the research scripts (<code>score.py</code>, its tests and data) are not included: the snippets show the shape of the workflow, not a ready-to-run exercise. Cluster settings follow your institution's documentation.</p>
+        <ul class="facts">
+          <li><a href="https://refspecs.linuxfoundation.org/FHS_3.0/fhs-3.0.html">Filesystem Hierarchy Standard 3.0</a></li>
+          <li><a href="https://man7.org/linux/man-pages/">Linux man-pages project</a> (path_resolution, credentials, pty, proc)</li>
+          <li><a href="https://www.freedesktop.org/software/systemd/man/latest/">systemd manual pages</a></li>
+          <li><a href="https://ubuntu.com/server/docs">Ubuntu Server documentation</a></li>
+          <li><a href="https://docs.python.org/3/library/venv.html">Python venv documentation</a> and <a href="https://packaging.python.org/en/latest/specifications/externally-managed-environments/">externally managed environments</a></li>
+          <li><a href="https://docs.docker.com/engine/">Docker Engine documentation</a> and <a href="https://apptainer.org/docs/user/latest/">Apptainer user guide</a></li>
+          <li><a href="https://slurm.schedmd.com/documentation.html">Slurm documentation</a></li>
+          <li><a href="https://docs.github.com/en/actions">GitHub Actions documentation</a></li>
+          <li><a href="https://www.top500.org/statistics/details/osfam/1/">TOP500 operating-system statistics</a>, June 2026 list</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <div class="share-row" aria-label="Share this tutorial">
+    <span class="share-lbl">Share</span>
+    <button type="button" class="share-pill" data-native-share hidden>Share…</button>
+    <a class="share-pill" data-share="linkedin" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    <a class="share-pill" data-share="bluesky" target="_blank" rel="noopener noreferrer">Bluesky</a>
+    <a class="share-pill" data-share="x" target="_blank" rel="noopener noreferrer">X</a>
+    <a class="share-pill" data-share="email">Email</a>
+    <button type="button" class="share-pill" data-copy-link>Copy link</button>
+  </div>
+
+  <footer>
+    <span>System view: 5 hardware roots · 1 kernel with 6 subsystems · 3 system components · 5 tool groups · 5 application families.</span>
+    <span>File system: 18 common top-level directories, a teaching selection rather than a list set by any standard.</span>
+    <span>© 2026 MD Shakhaowat Hossain. Text and diagrams: <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Code: <a href="https://github.com/hossainms/how-linux-works/blob/main/LICENSE">MIT</a>.</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svg');
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+
+function E(tag, attrs, parent, style) {
+  const e = document.createElementNS(NS, tag);
+  if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (style) Object.assign(e.style, style);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, str, cls, style, anchor) {
+  const t = E('text', { x, y, class: cls || '', 'text-anchor': anchor || 'middle' }, parent, style);
+  t.textContent = str;
+  return t;
+}
+function wrap(str, n) {
+  const out = []; let line = '';
+  for (const w of str.split(' ')) {
+    if ((line + ' ' + w).trim().length > n && line) { out.push(line); line = w; } else line = (line + ' ' + w).trim();
+  }
+  if (line) out.push(line);
+  return out;
+}
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const md = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+
+/* =====================================================================
+   DATA: the system (layers)
+   ===================================================================== */
+const TIER = {
+  hw:     { i: 0, y: 52,  h: 76,  label: 'Hardware',          meta: 'Roots' },
+  kernel: { i: 1, y: 196, h: 118, label: 'Kernel',            meta: 'Trunk' },
+  big:    { i: 2, y: 372, h: 92,  label: 'System components', meta: 'Large branches' },
+  small:  { i: 3, y: 528, h: 80,  label: 'Tools',             meta: 'Smaller branches' },
+  leaf:   { i: 4, y: 668, h: 96,  label: 'Applications',      meta: 'Leaves' },
+  ext:    { i: 5, y: 842, h: 72,  label: 'Outside world',     meta: 'Air and light' }
+};
+const CX = 666;
+
+const SYS = [
+  // ---- roots: hardware
+  { id: 'hw-cpu', tier: 'hw', cx: 326, w: 150, title: 'CPU', sub: 'runs instructions', color: '--chip',
+    what: 'The processor executes program instructions, billions per second. It never decides on its own which program runs next: the kernel’s scheduler does.',
+    ex: ['Intel Core', 'AMD Ryzen / EPYC', 'ARM (phones, Raspberry Pi, Apple-style chips)'],
+    tries: [['lscpu', 'model, cores, cache'], ['nproc', 'available processing units (logical CPUs), not necessarily physical cores']],
+    paths: ['/proc/cpuinfo', '/sys/devices/system/cpu'] },
+  { id: 'hw-ram', tier: 'hw', cx: 496, w: 150, title: 'Memory (RAM)', sub: 'short-term workspace', color: '--chip',
+    what: 'Fast, temporary storage for running programs and their data. Everything here is lost at power-off. Linux also uses spare RAM as a cache for files read from disk.',
+    ex: ['DDR4 / DDR5 modules', 'swap space on disk as overflow'],
+    tries: [['free -h', 'used, free and cached memory']],
+    paths: ['/proc/meminfo'] },
+  { id: 'hw-ssd', tier: 'hw', cx: 666, w: 150, title: 'Storage (SSD)', sub: 'keeps your files', color: '--chip',
+    what: 'Long-term storage that survives a reboot. The kernel shows each disk and partition as a device file, then a file system (such as ext4) organises the raw blocks into files and folders.',
+    ex: ['NVMe SSD', 'SATA hard disk', 'SD card'],
+    tries: [['lsblk', 'disks and partitions'], ['df -h', 'space used per file system']],
+    paths: ['/dev/sda1', '/dev/nvme0n1'] },
+  { id: 'hw-nic', tier: 'hw', cx: 836, w: 150, title: 'Network card', sub: 'Wi-Fi, Ethernet', color: '--chip',
+    what: 'The network interface card (NIC) turns data into radio waves or electrical signals and back. Every web page, email and SSH session passes through it.',
+    ex: ['Wi-Fi adapter (wlan0, wlp2s0)', 'Ethernet port (eth0, enp3s0)'],
+    tries: [['ip link', 'list network interfaces']],
+    paths: ['/sys/class/net'] },
+  { id: 'hw-periph', tier: 'hw', cx: 1006, w: 150, title: 'Peripherals', sub: 'keyboard, screen, USB', color: '--chip',
+    what: 'Everything you plug in or touch: keyboard, mouse, display, GPU, webcam, USB sticks, printers. Each one is handled by a driver in the kernel.',
+    ex: ['keyboard and mouse', 'monitor and GPU', 'USB drives', 'printers'],
+    tries: [['lsusb', 'connected USB devices'], ['ls /dev/input', 'input devices as files']],
+    paths: ['/dev/input', '/dev/tty1'] },
+
+  // ---- trunk: kernel
+  { id: 'kernel', tier: 'kernel', cx: CX, w: 540, title: 'Linux Kernel', sub: 'manages the hardware', color: '--kernel',
+    what: 'The kernel is the core of the operating system. It manages the hardware and decides how programs share the CPU, memory and devices. Programs request its services through system calls: read this file, send these bytes, give me memory. It also keeps programs and users isolated from each other.',
+    ex: ['Started by Linus Torvalds in 1991', 'written mostly in C, with Rust accepted for some drivers', 'the same kernel runs Android phones, servers and supercomputers'],
+    tries: [['uname -r', 'which kernel version is running'], ['ls /boot', 'the kernel image (vmlinuz) on disk']],
+    paths: ['/boot', '/proc', '/sys', '/lib/modules'] }
+];
+const KSUBS = [
+  { id: 'k-sched', label: 'Scheduler', name: 'Process scheduler',
+    what: 'Shares the CPU among hundreds of processes by switching between them many times per second, so everything appears to run at once.',
+    tries: [['top', 'live view of processes and CPU use']], paths: ['/proc'] },
+  { id: 'k-mem', label: 'Memory', name: 'Memory management',
+    what: 'Gives every process its own private virtual address space, moves rarely used pages to swap, and keeps recently read files cached in RAM.',
+    tries: [['cat /proc/meminfo', 'the kernel’s own memory report']], paths: ['/proc/meminfo'] },
+  { id: 'k-drivers', label: 'Drivers', name: 'Device drivers',
+    what: 'Code that knows how to talk to one kind of hardware. Many are loadable modules that the kernel pulls in when a device appears.',
+    tries: [['lsmod', 'modules loaded right now']], paths: ['/lib/modules', '/dev'] },
+  { id: 'k-vfs', label: 'Files (VFS)', name: 'Virtual file system',
+    what: 'One interface for every file system. Programs call open() and read() the same way whether the data is on ext4, btrfs, a FAT USB stick, or a network share.',
+    tries: [['df -T', 'mounted file systems and their types']], paths: ['/proc/filesystems'] },
+  { id: 'k-net', label: 'Network', name: 'Network stack',
+    what: 'Implements TCP/IP: splits data into packets, routes them, and reassembles replies. The built-in firewall (netfilter) lives here too.',
+    tries: [['ip addr', 'your IP addresses'], ['ss -tn', 'open TCP connections']], paths: ['/proc/net', '/etc/hosts'] },
+  { id: 'k-sec', label: 'Security', name: 'Security',
+    what: 'Enforces users, groups and file permissions, plus extra controls such as SELinux or AppArmor and the namespaces that make containers possible.',
+    tries: [['id', 'your user and groups'], ['ls -l /etc/shadow', 'who may read password hashes']], paths: ['/etc/passwd', '/etc/shadow'] }
+];
+SYS.push(
+  // ---- large branches
+  { id: 'lib', tier: 'big', cx: 376, w: 250, title: 'System Libraries', mono: 'e.g. glibc', sub: 'Shared code many programs use', color: '--lib',
+    what: 'Ready-made code that almost every program links to: opening files, printing text, maths, looking up host names. The GNU C Library (glibc) wraps raw system calls in friendly functions such as printf() and fopen().',
+    ex: ['glibc (libc.so.6)', 'libm (maths)', 'OpenSSL', 'zlib'],
+    tries: [['ldd /usr/bin/ls', 'which libraries ls needs']],
+    paths: ['/lib', '/usr/lib'] },
+  { id: 'svc', tier: 'big', cx: CX, w: 250, title: 'Services & Daemons', mono: 'e.g. systemd, sshd', sub: 'Background programs, no window', color: '--svc',
+    what: 'Programs that run quietly in the background: logging, networking, SSH logins, printing, scheduled jobs. On most distributions systemd (process number 1) starts them at boot or on demand, and restarts a failed service when that service is configured to be restarted.',
+    ex: ['systemd', 'sshd', 'cron', 'systemd-resolved (DNS)', 'udev'],
+    tries: [['systemctl --type=service', 'services and their state'], ['ps -p 1', 'what runs as PID 1']],
+    paths: ['/etc/systemd', '/var/log', '/run'] },
+  { id: 'shell', tier: 'big', cx: 956, w: 250, title: 'Shell', mono: 'e.g. bash, zsh', sub: 'You type, it runs the program', color: '--shell',
+    what: 'A text interface to the system. You type a command; the shell finds the program on disk, asks the kernel to start it, and shows you the result. It also chains programs together with pipes (|) and runs scripts.',
+    ex: ['bash', 'zsh', 'fish', 'sh (dash)'],
+    tries: [['echo $SHELL', 'your login shell'], ['ls /usr/bin | wc -l', 'count programs with a pipe']],
+    paths: ['/bin/bash', '/home/you/.bashrc', '/etc/shells'] },
+
+  // ---- smaller branches
+  { id: 'tool-util', tier: 'small', cx: 278, w: 160, title: 'Core\nutilities', mono: 'ls  cp  cat  sort', color: '--tool',
+    what: 'Small programs that each do one job well. Combined in the shell, they handle most everyday file and text work. On Linux most come from the GNU coreutils package.',
+    ex: ['ls', 'cp', 'mv', 'rm', 'cat', 'sort', 'grep'],
+    tries: [['ls -l ~', 'long listing of your home folder'], ['sort data.csv | head', 'first lines, sorted']],
+    paths: ['/usr/bin/ls', '/bin'] },
+  { id: 'tool-fs', tier: 'small', cx: 472, w: 160, title: 'File system\ntools', mono: 'mount  df  fsck', color: '--tool',
+    what: 'Tools to create, check, attach and measure file systems: format a new disk, mount a USB stick, find what is filling the drive.',
+    ex: ['mount / umount', 'df', 'du', 'mkfs', 'fsck'],
+    tries: [['du -sh ~/*', 'size of each item in home'], ['mount | head', 'what is mounted where']],
+    paths: ['/sbin', '/etc/fstab', '/mnt'] },
+  { id: 'tool-proc', tier: 'small', cx: CX, w: 160, title: 'Process\nmanagement', mono: 'ps  top  kill', color: '--tool',
+    what: 'See what is running, how much CPU and memory it uses, and stop it if needed. These tools read their numbers straight from /proc.',
+    ex: ['ps', 'top / htop', 'kill', 'nice'],
+    tries: [['ps aux | head', 'every process, all users'], ['sleep 300 & demo_pid=$!', 'start a harmless test process and save its process ID'], ['kill "$demo_pid"', 'ask exactly that process to stop']],
+    paths: ['/proc'] },
+  { id: 'tool-net', tier: 'small', cx: 860, w: 160, title: 'Networking\ntools', mono: 'ip  ssh  ping', color: '--tool',
+    what: 'Configure interfaces, test connections and log in to other machines. ssh is how most people reach remote Linux servers and HPC clusters.',
+    ex: ['ip', 'ping', 'ssh', 'curl', 'scp / rsync'],
+    tries: [['ping -c 3 tulane.edu', 'is the network up?'], ['ssh you@server', 'log in to another machine']],
+    paths: ['/etc/hosts', '/etc/resolv.conf', '/home/you/.ssh'] },
+  { id: 'tool-pkg', tier: 'small', cx: 1054, w: 160, title: 'Package\nmanagement', mono: 'apt  dnf  pacman', color: '--tool',
+    what: 'Installs, updates and removes software from trusted online repositories, and keeps track of which files each package owns.',
+    ex: ['apt (Debian, Ubuntu)', 'dnf / yum (Fedora, RHEL)', 'pacman (Arch)', 'conda (per-user)'],
+    tries: [['apt list --installed | wc -l', 'how many packages'], ['sudo apt update', 'refresh the catalogue']],
+    paths: ['/etc/apt', '/var/lib/dpkg', '/var/cache/apt'] },
+
+  // ---- leaves
+  { id: 'app-user', tier: 'leaf', cx: 278, w: 172, title: 'User apps', pills: ['Firefox', 'VS Code', 'LibreOffice'], color: '--leaf',
+    what: 'Desktop programs people use every day. They never touch hardware themselves; every click ends up as library calls and system calls further up the tree.',
+    ex: ['Firefox', 'Chrome', 'VS Code', 'LibreOffice', 'GIMP'],
+    tries: [['firefox https://tulane.edu &', 'open a page from the shell']],
+    paths: ['/usr/bin/firefox', '/usr/share/applications'] },
+  { id: 'app-srv', tier: 'leaf', cx: 472, w: 172, title: 'Servers', pills: ['nginx', 'Apache', 'PostgreSQL'], color: '--leaf',
+    what: 'Software that answers requests from other computers: web pages, databases, file shares. Linux is the usual choice for public web servers.',
+    ex: ['nginx', 'Apache httpd', 'PostgreSQL', 'MySQL', 'Samba'],
+    tries: [['systemctl status nginx', 'is the web server running?']],
+    paths: ['/srv', '/etc/nginx', '/var/www', '/var/log/nginx'] },
+  { id: 'app-dev', tier: 'leaf', cx: CX, w: 172, title: 'Development', pills: ['git', 'Python', 'GCC'], color: '--leaf',
+    what: 'Tools for writing, building and versioning software. git, the version-control tool, was itself written by Linus Torvalds to manage the kernel’s source code.',
+    ex: ['git', 'Python', 'GCC / Clang', 'make', 'Node.js'],
+    tries: [['python3 --version', ''], ['git log --oneline | head', 'recent commits']],
+    paths: ['/usr/bin/python3', '/usr/bin/gcc', '/usr/local/bin'] },
+  { id: 'app-data', tier: 'leaf', cx: 860, w: 172, title: 'Data & science', pills: ['R', 'Jupyter', 'Slurm'], color: '--leaf',
+    what: 'Statistics, notebooks and cluster computing. Every system on the TOP500 list of the world’s fastest supercomputers runs Linux (June 2026 list), and university HPC clusters schedule jobs with tools such as Slurm.',
+    ex: ['R', 'Jupyter', 'conda', 'Slurm (sbatch, squeue)', 'MATLAB'],
+    tries: [['R --version', ''], ['sbatch job.sh', 'submit a job on an HPC cluster']],
+    paths: ['/usr/bin/R', '/usr/lib/R', '/opt'] },
+  { id: 'app-ctr', tier: 'leaf', cx: 1054, w: 172, title: 'Containers & VMs', pills: ['Docker', 'Podman', 'QEMU'], color: '--leaf',
+    what: 'Ways to run isolated systems on one machine. A container shares the host’s kernel and only packages the apps above it. A virtual machine boots a whole separate kernel on virtual hardware. VM software such as QEMU runs here in user space; on Linux it can use KVM, a virtualization module inside the kernel, through /dev/kvm for hardware acceleration.',
+    ex: ['Docker', 'Podman', 'Apptainer (HPC)', 'QEMU (with KVM in the kernel)', 'VirtualBox'],
+    tries: [['docker run hello-world', 'start a tiny container']],
+    paths: ['/var/lib/docker', '/dev/kvm'] },
+
+  // ---- outside world
+  { id: 'ext-other', tier: 'ext', cx: 396, w: 180, title: 'Other devices', sub: 'phones, routers, cars', color: '--ext',
+    what: 'Linux reaches far beyond PCs. Android is built on the Linux kernel, and most home routers, smart TVs and many car dashboards run it too.',
+    ex: ['Android phones', 'Wi-Fi routers', 'smart TVs', 'Raspberry Pi'], tries: [], paths: [] },
+  { id: 'ext-cloud', tier: 'ext', cx: 576, w: 180, title: 'Cloud', sub: 'AWS, Azure, Google', color: '--ext',
+    what: 'Cloud providers rent out virtual machines and containers by the hour, and most of them run Linux. Package mirrors that serve software updates live here too.',
+    ex: ['AWS EC2', 'Azure VMs', 'Google Cloud', 'package mirrors'], tries: [['curl -I https://archive.ubuntu.com', 'reach a package mirror']], paths: ['/etc/apt/sources.list.d/ubuntu.sources'] },
+  { id: 'ext-net', tier: 'ext', cx: 756, w: 180, title: 'Networks', sub: 'LAN, Wi-Fi, Internet', color: '--ext',
+    what: 'Everything outside the network card: your Wi-Fi router, the campus network, and the wider Internet with its DNS and web servers.',
+    ex: ['home Wi-Fi', 'campus network', 'the Internet'], tries: [['traceroute tulane.edu', 'hops between you and a server']], paths: ['/etc/resolv.conf'] },
+  { id: 'ext-users', tier: 'ext', cx: 936, w: 180, title: 'Users', sub: 'you, at a screen or SSH', color: '--ext',
+    what: 'People. Some sit at the machine; many more connect over SSH or through a web browser. Linux was built as a multi-user system from day one.',
+    ex: ['you at the keyboard', 'remote users over SSH', 'visitors to a website'], tries: [['who', 'who is logged in now']], paths: ['/home/you', '/etc/passwd'] }
+);
+
+const SYSCALL = { id: 'syscall', title: 'System call interface',
+  what: 'The border between user space (everything below this line) and kernel space (above it). Ordinary programs do not access hardware directly; they ask the kernel through a few hundred well-defined system calls such as openat, read, write, execve and socket.',
+  ex: ['openat()', 'read() / write()', 'execve()', 'socket()', 'getdents64()'],
+  tries: [['strace -c ls', 'count the system calls ls makes'], ['strace -e openat cat /etc/hostname', 'watch one call']],
+  paths: [] };
+
+const RAIL = [
+  { tier: 'hw',     k: 'ROOTS',            t: 'Hardware',          n: 'Anchor the tree and supply raw resources' },
+  { tier: 'kernel', k: 'TRUNK',            t: 'Kernel',            n: 'Carries everything between roots and branches' },
+  { tier: 'big',    k: 'LARGE BRANCHES',   t: 'System components', n: 'Carry the kernel’s services outward' },
+  { tier: 'small',  k: 'SMALLER BRANCHES', t: 'Tools',             n: 'Split those services into specific jobs' },
+  { tier: 'leaf',   k: 'LEAVES',           t: 'Applications',      n: 'Where the real work gets done' },
+  { tier: 'ext',    k: 'AIR AND LIGHT',    t: 'Outside world',     n: 'The people and networks the leaves face' }
+];
+
+/* Real tasks. Each step names the node the token lands on, an optional kernel subsystem,
+   a plain-language caption, and the files involved. */
+const SCEN = {
+  ls: { label: 'Type <code>ls</code>', term: 'bash',
+    lines: [{ at: 0, p: 'you@linux:~$ ', t: 'ls Documents' }, { at: 12, t: 'data.csv  notes.txt  thesis.pdf' }, { at: 12, p: 'you@linux:~$ ', t: '', cur: 1 }],
+    steps: [
+      { n: 'ext-users', c: 'You type `ls Documents` and press Enter.' },
+      { n: 'hw-periph', c: 'The keyboard sends a code for each key press to the computer.' },
+      { n: 'kernel', s: 'k-drivers', c: 'The kernel’s input driver turns them into key events. The desktop passes them to your terminal emulator (such as GNOME Terminal), which writes the characters into a pseudoterminal where Bash reads them.', f: ['/dev/input', '/dev/pts/0'] },
+      { n: 'shell', c: 'Bash reads the line and searches your PATH for a program named `ls`. It finds it in /usr/bin.', f: ['/usr/bin/ls'] },
+      { n: 'kernel', s: 'k-sched', c: 'Bash asks the kernel to start a new process (fork, then execve). The scheduler gives it CPU time.' },
+      { n: 'tool-util', c: '`ls`, a GNU coreutils program, starts running as its own process.' },
+      { n: 'lib', c: 'ls calls glibc functions such as opendir() and readdir() to list the folder.', f: ['/lib/x86_64-linux-gnu/libc.so.6'] },
+      { n: 'kernel', s: 'k-vfs', c: 'glibc crosses into the kernel with the getdents64 system call. The virtual file system asks the ext4 driver for the folder’s entries.' },
+      { n: 'hw-ssd', c: 'If the folder is not already cached in RAM, the kernel reads its blocks from the SSD.', f: ['/dev/nvme0n1'] },
+      { n: 'tool-util', c: 'The names come back up to ls, which sorts them alphabetically and writes them to standard output.', f: ['/home/you/Documents'] },
+      { n: 'kernel', s: 'k-drivers', c: 'The write() system call sends the text into the pseudoterminal. The terminal emulator reads it and draws the characters in its window, and the desktop’s graphics stack passes the window to the GPU driver.', f: ['/dev/pts/0'] },
+      { n: 'hw-periph', c: 'The GPU puts the characters on your screen.' },
+      { n: 'ext-users', c: 'You see three file names. About 13 hand-offs, in a few milliseconds.' }
+    ] },
+  web: { label: 'Open a website', term: 'bash · try these yourself',
+    lines: [{ at: 0, c: '# you clicked a link; these show the same steps' }, { at: 2, p: '$ ', t: 'getent hosts www.tulane.edu' }, { at: 4, c: '# DNS answered by systemd-resolved' }, { at: 6, p: '$ ', t: 'ip route get 1.1.1.1' }, { at: 8, p: '$ ', t: 'ss -tnp state established' }, { at: 12, c: '# page rendered' }],
+    steps: [
+      { n: 'ext-users', c: 'You click a link to tulane.edu in Firefox.' },
+      { n: 'app-user', c: 'Firefox needs the web server’s IP address before it can connect.', f: ['/usr/bin/firefox'] },
+      { n: 'lib', c: 'In this example Firefox uses the operating system’s resolver: it asks glibc (getaddrinfo) to look up the name. With DNS over HTTPS turned on, Firefox resolves names itself and skips the next step.', f: ['/etc/nsswitch.conf'] },
+      { n: 'svc', c: 'On Ubuntu the question goes to systemd-resolved, the local DNS service.', f: ['/etc/resolv.conf'] },
+      { n: 'kernel', s: 'k-net', c: 'The kernel’s network stack wraps the DNS query, and then the HTTPS request, into TCP/IP packets.' },
+      { n: 'hw-nic', c: 'The network card sends the packets out over Wi-Fi or Ethernet.' },
+      { n: 'ext-net', c: 'The packets cross the Internet. DNS replies with an address, then the web server sends back the page.' },
+      { n: 'hw-nic', c: 'The reply packets arrive at the network card.' },
+      { n: 'kernel', s: 'k-net', c: 'The kernel reassembles the packets in order and delivers the bytes to Firefox’s socket.' },
+      { n: 'app-user', c: 'Firefox decrypts the HTTPS data and lays out the HTML, styles and images.' },
+      { n: 'kernel', s: 'k-drivers', c: 'It hands the finished frame to the kernel’s graphics driver (DRM).', f: ['/dev/dri/card0'] },
+      { n: 'hw-periph', c: 'The GPU sends the image to your display.' },
+      { n: 'ext-users', c: 'The page appears, usually in well under a second.' }
+    ] },
+  usb: { label: 'Plug in a USB stick', term: 'bash',
+    lines: [{ at: 0, c: '# before: one disk' }, { at: 2, p: 'you@linux:~$ ', t: 'sudo dmesg | tail -2' }, { at: 2, t: 'usb 1-2: new high-speed USB device\nsd 2:0:0:0: [sdb] Attached SCSI removable disk' }, { at: 5, p: 'you@linux:~$ ', t: 'lsblk -o NAME,SIZE,MOUNTPOINTS' }, { at: 5, t: 'NAME     SIZE MOUNTPOINTS\nnvme0n1  512G\n└─nvme0n1p2 511G /\nsdb       32G\n└─sdb1    32G /media/you/USB_STICK' }],
+    steps: [
+      { n: 'ext-users', c: 'You plug a USB stick into the laptop.' },
+      { n: 'hw-periph', c: 'The USB controller notices a new device and reports it.' },
+      { n: 'kernel', s: 'k-drivers', c: 'The kernel’s usb-storage driver recognises a disk and creates a device file for it: /dev/sdb1.', f: ['/dev/sdb1'] },
+      { n: 'svc', c: 'systemd-udevd hears the kernel’s event and announces the new disk to the rest of the system.', f: ['/run/udev'] },
+      { n: 'tool-fs', c: 'The desktop asks udisks2 to mount the stick at /media/you/USB_STICK.', f: ['/media/you/USB_STICK'] },
+      { n: 'kernel', s: 'k-vfs', c: 'The virtual file system attaches the stick’s FAT or exFAT file system to the directory tree.' },
+      { n: 'app-user', c: 'The file manager shows a new USB_STICK icon in its sidebar.' },
+      { n: 'ext-users', c: 'You open your files. Running `lsblk` shows the same thing in text.' }
+    ] },
+  apt: { label: 'Install R with <code>apt</code>', term: 'bash',
+    lines: [{ at: 0, p: 'you@linux:~$ ', t: 'sudo apt install r-base' }, { at: 1, t: '[sudo] password for you:' }, { at: 2, t: 'The following NEW packages will be installed:\n  r-base r-base-core r-recommended ...' }, { at: 5, t: 'Get:1 http://archive.ubuntu.com/ubuntu ... r-base-core' }, { at: 8, t: 'Unpacking r-base-core ...\nSetting up r-base ...' }, { at: 10, p: 'you@linux:~$ ', t: 'which R' }, { at: 10, t: '/usr/bin/R' }],
+    steps: [
+      { n: 'ext-users', c: 'You type `sudo apt install r-base` in a terminal.' },
+      { n: 'shell', c: 'Bash runs sudo, which checks your password and grants administrator (root) rights for this one command.', f: ['/etc/sudoers'] },
+      { n: 'tool-pkg', c: 'apt works out what r-base depends on and which packages are missing.', f: ['/etc/apt/sources.list.d/ubuntu.sources', '/var/lib/dpkg'] },
+      { n: 'kernel', s: 'k-net', c: 'apt opens connections to the package mirror through the kernel’s network stack.' },
+      { n: 'hw-nic', c: 'The network card carries the download requests out.' },
+      { n: 'ext-cloud', c: 'A distribution mirror sends back the .deb package files.' },
+      { n: 'hw-nic', c: 'The package data streams in through the network card.' },
+      { n: 'kernel', s: 'k-vfs', c: 'dpkg unpacks each package, and the kernel writes the files through the virtual file system.', f: ['/var/cache/apt'] },
+      { n: 'hw-ssd', c: 'The files land on the SSD: the program, its libraries and its settings.', f: ['/usr/bin/R', '/usr/lib/R', '/etc/R'] },
+      { n: 'app-data', c: 'R is now a new leaf on the tree, ready to run.' },
+      { n: 'ext-users', c: 'Type `R` to start it. `which R` shows where it lives.', f: ['/usr/bin/R'] }
+    ] }
+};
+
+/* =====================================================================
+   DATA: the file system (FHS)
+   ===================================================================== */
+const CATS = [
+  { id: 'cat-prog', title: 'Programs', sub: 'commands and libraries', color: '--c-prog' },
+  { id: 'cat-cfg',  title: 'Settings & boot', sub: 'configuration, startup', color: '--c-cfg' },
+  { id: 'cat-home', title: 'People', sub: 'home folders', color: '--c-home' },
+  { id: 'cat-dev',  title: 'Devices & drives', sub: 'hardware as files', color: '--c-dev' },
+  { id: 'cat-var',  title: 'Changing data', sub: 'logs, temp, runtime', color: '--c-var' },
+  { id: 'cat-virt', title: 'Kernel windows', sub: 'live views, not on disk', color: '--c-virt' }
+];
+const DIRS = [
+  { d: '/bin', cat: 'cat-prog', sub: 'essential commands', what: 'Essential commands that every user needs, even in single-user rescue mode.', ex: ['ls', 'cp', 'cat', 'grep', 'ps', 'ping'], tries: [['ls /bin | head', '']],
+    note: 'On most current distributions /bin is a shortcut (symlink) to /usr/bin, so both paths reach the same files.' },
+  { d: '/sbin', cat: 'cat-prog', sub: 'admin commands', what: 'System administration commands, mostly for the root user: checking disks, rebooting, configuring the network and firewall.', ex: ['fsck', 'reboot', 'fdisk', 'ip', 'iptables', 'swapon'], tries: [['ls /sbin | head', '']],
+    note: 'Like /bin, /sbin usually points into /usr (here /usr/sbin) on current distributions.' },
+  { d: '/lib', cat: 'cat-prog', sub: 'shared libraries', what: 'Shared libraries the programs in /bin and /sbin need to run, plus the kernel’s loadable driver modules. Library names look like lib*.so.* and ld*.', ex: ['libc.so.6', 'ld-linux-x86-64.so.2', '/lib/modules/<version>'], tries: [['ls /lib/modules', 'driver modules per kernel']] },
+  { d: '/usr', cat: 'cat-prog', sub: 'most installed software', what: 'The secondary hierarchy, read-only in normal use, holding most user programs, libraries, documentation and source code.',
+    ex: ['/usr/bin: user programs (awk, less, scp)', '/usr/sbin: admin daemons (sshd, cron, useradd)', '/usr/lib: their libraries', '/usr/local: software you build yourself', '/usr/src: kernel sources and headers', '/usr/share: icons, man pages'], tries: [['ls /usr', ''], ['ls /usr/local/bin', 'things you installed by hand']] },
+  { d: '/opt', cat: 'cat-prog', sub: 'add-on vendor apps', what: 'Optional add-on software from third-party vendors, each in its own folder with its files and data kept together.', ex: ['/opt/google/chrome', '/opt/zoom', '/opt/conda'], tries: [['ls /opt', '']] },
+
+  { d: '/etc', cat: 'cat-cfg', sub: 'system configuration', what: 'Host-specific, system-wide configuration, almost all of it plain text you can read. Also holds start-up scripts for services.', ex: ['/etc/hostname', '/etc/passwd', '/etc/resolv.conf', '/etc/fstab', '/etc/logrotate.conf'], tries: [['cat /etc/hostname', 'this machine’s name'], ['cat /etc/os-release', 'which distribution']],
+    note: 'The name comes from “et cetera”. “Editable Text Configuration” is a popular later explanation, not the origin.' },
+  { d: '/boot', cat: 'cat-cfg', sub: 'kernel and boot loader', what: 'Everything needed to start the computer: the compressed kernel image, the initial RAM disk, and the GRUB boot loader’s files.', ex: ['vmlinuz-<version>', 'initrd.img-<version>', 'grub/grub.cfg'], tries: [['ls /boot', '']] },
+
+  { d: '/home', cat: 'cat-home', sub: 'one folder per user', what: 'Every regular user gets a personal folder here for documents, downloads and personal settings. By default other users cannot change it.', ex: ['/home/you', '/home/you/Documents', '/home/you/.bashrc'], tries: [['echo ~', 'path of your home'], ['ls -a ~', 'including hidden settings files']] },
+  { d: '/root', cat: 'cat-home', sub: 'root user’s home', what: 'The home folder of the root (administrator) account. It sits outside /home so it is available even if /home is on a separate disk that failed to mount.', ex: ['/root/.bashrc'], tries: [['sudo ls /root', 'needs admin rights']],
+    note: 'Do not confuse /root with / (the root directory).' },
+
+  { d: '/dev', cat: 'cat-dev', sub: 'devices as files', what: 'Special files that stand for hardware. Block devices (disks) move data in chunks; character devices (terminals, mice, sound) move it as a stream.', ex: ['/dev/sda1', '/dev/nvme0n1', '/dev/tty1', '/dev/usbmon0', '/dev/null'], tries: [['ls -l /dev/sd* /dev/nvme*', 'disks and partitions'], ['echo hi > /dev/null', 'writes vanish']] },
+  { d: '/media', cat: 'cat-dev', sub: 'removable media', what: 'Where removable devices such as USB sticks, SD cards and CDs appear automatically when you plug them in.', ex: ['/media/you/USB_STICK', '/media/cdrom'], tries: [['ls /media/$USER', 'mounted sticks and cards']] },
+  { d: '/mnt', cat: 'cat-dev', sub: 'manual mounts', what: 'A spot for administrators to mount a file system by hand for a while, such as a backup disk or a network share.', ex: ['/mnt/backup', '/mnt/nas'], tries: [['lsblk', 'identify the disk and partition first'], ['sudo mount /dev/sdXN /mnt', 'administrator example: use the partition lsblk showed']] },
+
+  { d: '/tmp', cat: 'cat-var', sub: 'temporary files', what: 'Scratch space any program or user can write to. Files here are not meant to last; the system may clear them automatically or at reboot.', ex: ['/tmp/download.part', 'per-program sockets'], tries: [['ls /tmp', '']] },
+  { d: '/var', cat: 'cat-var', sub: 'logs, caches, spools', what: 'Data that grows and changes while the system runs: log files, package caches, mail and print queues, databases.', ex: ['/var/log', '/var/cache/apt', '/var/lib/dpkg', '/var/www'], tries: [['ls /var/log', 'system logs'], ['journalctl -n 20', 'recent log lines']],
+    note: 'One of the most used directories on any Linux system.' },
+  { d: '/srv', cat: 'cat-var', sub: 'data this machine serves', what: 'Site-specific data offered to others by this system: web sites, FTP downloads, version-control repositories. srv stands for service.', ex: ['/srv/www', '/srv/ftp', '/srv/cvs'], tries: [['ls /srv', 'often empty on a laptop']] },
+  { d: '/run', cat: 'cat-var', sub: 'since last boot', what: 'Runtime information about the system since it last booted: which services are running, their process IDs and sockets. It lives in RAM and starts empty at each boot.', ex: ['/run/user/1000', '/run/systemd', '/run/udev'], tries: [['ls /run', '']],
+    note: 'Added to the FHS standard in version 3.0.' },
+
+  { d: '/proc', cat: 'cat-virt', sub: 'processes and stats', what: 'A virtual file system. Nothing here is stored on disk: the kernel generates each file the moment you read it. There is one numbered folder per running process.', ex: ['/proc/meminfo', '/proc/cpuinfo', '/proc/uptime', '/proc/<pid>/'], tries: [['cat /proc/uptime', 'seconds since boot'], ['ls /proc/$$', 'your shell’s own process folder']] },
+  { d: '/sys', cat: 'cat-virt', sub: 'devices and drivers', what: 'Another virtual file system, organised by hardware: every device, driver and bus the kernel knows about, with settings you can sometimes change.', ex: ['/sys/class/net', '/sys/block', '/sys/devices/system/cpu'], tries: [['ls /sys/class/net', 'network interfaces']] }
+];
+const ROOTINFO = { title: '/ (root)', what: 'The root directory, the top of the whole tree. Every file on the system sits somewhere below it, even files that physically live on another disk, a USB stick or a network share. On a typical system / is owned by root and is not writable by ordinary users, who get “Permission denied” if they try to create files here.',
+  ex: ['ls /', 'cd /', 'touch /test (fails for normal users)'], tries: [['ls /', 'list the top-level directories'], ['tree -L 1 /', 'the same as a tree']] };
+const KNOWN = {
+  '/usr/bin/python3': 'The Python interpreter. The package manager put it in /usr/bin, which is on every user’s PATH.',
+  '/usr/bin/ls': 'The ls program from GNU coreutils.',
+  '/usr/bin/R': 'The R launcher installed by apt.',
+  '/usr/bin/r': 'Not R: Linux names are case-sensitive, so this is a different file. On Debian and Ubuntu it is littler, a scripting front end for R, if installed.',
+  '/usr/local/bin': 'Programs you compiled or installed by hand, kept apart from the package manager’s files.',
+  '/etc/hostname': 'One line of text: this computer’s name.',
+  '/etc/passwd': 'The list of user accounts. Password hashes are kept separately in /etc/shadow, which is restricted to privileged access.',
+  '/etc/resolv.conf': 'Tells programs which DNS server to ask for name lookups.',
+  '/home/you/Documents/thesis.pdf': 'A document in your own home folder. Who else can read or change it depends on its permissions.',
+  '/home/you/.bashrc': 'Your personal shell settings. The dot makes it a hidden file.',
+  '/dev/sda1': 'Partition 1 of the disk the kernel named sda (a SATA, SCSI or USB disk). Names can change between boots.',
+  '/dev/null': 'A bottomless bin: anything written here disappears.',
+  '/proc/cpuinfo': 'Generated by the kernel when you read it. It describes each logical CPU, which need not equal a physical core.',
+  '/proc/meminfo': 'The kernel’s live memory report, used by free and top.',
+  '/var/log/syslog': 'A text system log written by rsyslog, installed by default on Ubuntu. Systems without it rely on the systemd journal (journalctl), which Ubuntu also keeps.',
+  '/media/you/USB_STICK': 'Your USB stick, mounted here automatically when you plugged it in.',
+  '/boot/grub/grub.cfg': 'The GRUB boot menu configuration, read before the kernel even starts.',
+  '/tmp': 'Scratch space for everyone. Usually emptied at reboot.',
+  '/opt/google/chrome': 'Google Chrome, installed as a self-contained vendor package.'
+};
+const PRESETS = ['/usr/bin/python3', '/etc/hostname', '/home/you/Documents/thesis.pdf', '/dev/sda1', '/proc/cpuinfo', '/var/log/syslog', '/media/you/USB_STICK'];
+
+/* Story journeys: played on the system tree from the story tab (not listed as task chips). */
+const RP = 'safir@genome01:~$ ';
+Object.assign(SCEN, {
+  login: { story: 1, label: 'Logging in', term: 'genome01 · login',
+    lines: [{ at: 0, p: 'genome01 login: ', t: 'safir' }, { at: 0, t: 'Password:' }, { at: 5, p: RP, t: 'id' }, { at: 5, t: 'uid=1001(safir) gid=1001(safir) groups=1001(safir),27(sudo)' }, { at: 6, p: RP, t: 'ls /home/omar' }, { at: 6, t: "ls: cannot open directory '/home/omar': Permission denied" }],
+    steps: [
+      { n: 'ext-users', c: 'Safir types his user name and password, at the screen or over SSH.' },
+      { n: 'svc', c: 'The login service (sshd, for remote logins) takes the request. On this workstation it checks his identity through PAM.', f: ['/etc/passwd'] },
+      { n: 'kernel', s: 'k-sec', c: 'The password hashes in /etc/shadow are restricted to privileged access, and the kernel enforces that rule. The login service has that privilege.', f: ['/etc/shadow'] },
+      { n: 'hw-ssd', c: 'His account entry and his password hash are read from disk.', f: ['/etc/passwd', '/etc/shadow'] },
+      { n: 'kernel', s: 'k-sched', c: 'The password checks out. The login service starts a new process for his shell, running with user ID 1001.' },
+      { n: 'shell', c: 'bash starts in /home/safir and runs his personal settings file.', f: ['/home/safir/.bashrc'] },
+      { n: 'ext-users', c: 'His prompt appears. From now on the kernel checks his user and group IDs (user 1001) against each file’s permissions, which is why Omar’s folder says Permission denied.' }
+    ] },
+  mkdir: { story: 1, label: 'Creating folders', term: 'bash',
+    lines: [{ at: 0, p: RP, t: 'mkdir -p ~/projects/hla-study/{data,scripts,results}' }, { at: 7, p: RP, t: 'ls ~/projects/hla-study' }, { at: 7, t: 'data  results  scripts' }],
+    steps: [
+      { n: 'ext-users', c: 'Safir types `mkdir -p ~/projects/hla-study/{data,scripts,results}`.' },
+      { n: 'shell', c: 'bash turns `~` into /home/safir and the `{…}` into three folder names, then finds mkdir in /usr/bin.', f: ['/usr/bin/mkdir'] },
+      { n: 'tool-util', c: 'mkdir, a coreutils program, starts with three paths to create.' },
+      { n: 'lib', c: 'For each path it calls the glibc function mkdir().' },
+      { n: 'kernel', s: 'k-sec', c: 'Across the system call border, the kernel checks first: /home/safir grants its owner, safir, write and search permission, so he may create folders there.' },
+      { n: 'kernel', s: 'k-vfs', c: 'The virtual file system asks ext4 to add three new folder entries.' },
+      { n: 'hw-ssd', c: 'The change sits in the RAM cache for a moment, then reaches the SSD.', f: ['/home/safir/projects'] },
+      { n: 'ext-users', c: 'Three folders now exist. `ls` or `tree` shows them.' }
+    ] },
+  pipe: { story: 1, label: 'A bash pipeline', term: 'bash',
+    lines: [{ at: 0, p: RP, t: 'tail -n +2 data/samples.csv | cut -d, -f2 | sort | uniq -c | sort -nr | head -n 3' }, { at: 8, t: '    812 A*02:01\n    640 A*24:02\n    511 A*11:01' }],
+    steps: [
+      { n: 'ext-users', c: 'Safir types six small programs joined by `|`.' },
+      { n: 'shell', c: 'Bash starts the programs and connects them with pipes: each program’s output becomes the next one’s input.' },
+      { n: 'kernel', s: 'k-sched', c: 'The programs can run concurrently. The scheduler shares the CPU cores among them.' },
+      { n: 'hw-cpu', c: 'The CPU cores do the cutting, counting and sorting.' },
+      { n: 'kernel', s: 'k-mem', c: 'Data passes between the programs through kernel-managed pipe buffers in memory, not files Safir has to create.' },
+      { n: 'tool-util', c: 'head prints the top three lines and exits; the others finish too.' },
+      { n: 'kernel', s: 'k-drivers', c: 'The text goes to the terminal driver.' },
+      { n: 'hw-periph', c: 'The screen draws it.' },
+      { n: 'ext-users', c: 'Safir has his answer. `echo $?` would show the exit status of the last stage, head.' }
+    ] },
+  venv: { story: 1, label: 'A virtual environment', term: 'bash',
+    lines: [{ at: 0, p: RP, t: 'python3 -m venv ~/venvs/hla' }, { at: 4, p: RP, t: 'source ~/venvs/hla/bin/activate' }, { at: 4, p: '(hla) ' + RP, t: 'python -c "import sys; print(sys.executable)"' }, { at: 4, t: '/home/safir/venvs/hla/bin/python' }, { at: 5, p: '(hla) ' + RP, t: 'python -m pip install "pandas>=2,<3"' }],
+    steps: [
+      { n: 'ext-users', c: 'Safir runs `python3 -m venv ~/venvs/hla`.' },
+      { n: 'app-dev', c: 'Python creates a folder with bin/ and lib/ inside his home. No administrator access is needed.', f: ['/home/safir/venvs/hla'] },
+      { n: 'kernel', s: 'k-vfs', c: 'The kernel writes the new folders. It is his own home, so no root is needed.' },
+      { n: 'hw-ssd', c: 'They land on disk.' },
+      { n: 'shell', c: '`source …/activate` puts ~/venvs/hla/bin at the front of PATH, sets a few environment variables and changes the prompt.' },
+      { n: 'tool-pkg', c: 'pip installs pandas into the venv’s own site-packages folder.', f: ['/home/safir/venvs/hla/lib'] },
+      { n: 'app-dev', c: '`python` now means the venv’s Python. Third-party packages come from the venv’s own site-packages; the standard library still comes from the base Python installation.' },
+      { n: 'ext-users', c: 'Omar’s pipeline still uses /usr/bin/python3 and its old pandas, untouched.', f: ['/usr/bin/python3'] }
+    ] },
+  ssh: { story: 1, label: 'SSH to a server', term: 'laptop → hla-srv',
+    lines: [{ at: 0, p: 'safir@laptop:~$ ', t: 'ssh safir\x40hla-srv.example.edu' }, { at: 10, p: 'safir@hla-srv:~$ ', t: 'hostname' }, { at: 10, t: 'hla-srv' }],
+    steps: [
+      { n: 'ext-users', c: 'On his laptop, Safir types `ssh safir\x40hla-srv.example.edu`.' },
+      { n: 'tool-net', c: 'The ssh client starts and reads his shortcuts and known servers.', f: ['/home/safir/.ssh/config', '/home/safir/.ssh/known_hosts'] },
+      { n: 'lib', c: 'A crypto library sets up encryption. The client will prove it can use his private key without ever sending it.', f: ['/home/safir/.ssh/id_ed25519'] },
+      { n: 'kernel', s: 'k-net', c: 'The laptop’s kernel sends encrypted packets to the server, on port 22 by default.' },
+      { n: 'hw-nic', c: 'Out through the laptop’s network card.' },
+      { n: 'ext-net', c: 'Across the campus network. The server is another Linux tree with the very same layers.' },
+      { n: 'hw-nic', c: 'Now on the server: its network card receives the packets.' },
+      { n: 'kernel', s: 'k-net', c: 'The server’s kernel hands them to the program listening on the SSH port.' },
+      { n: 'svc', c: 'That is sshd, the SSH service (on recent Ubuntu, started by systemd when a connection arrives). It checks whether his public key is authorized for his account and that the client holds the matching private key.', f: ['/home/safir/.ssh/authorized_keys', '/etc/ssh/sshd_config'] },
+      { n: 'shell', c: 'Authentication succeeds. sshd starts bash on the server, running as safir.' },
+      { n: 'ext-users', c: 'His prompt now says safir@hla-srv. Every key press travels encrypted to the server and back.' }
+    ] },
+  hpc: { story: 1, label: 'An HPC job', term: 'laptop → login1',
+    lines: [{ at: 0, p: 'safir@laptop:~$ ', t: 'ssh safir\x40hpc.example.edu' }, { at: 3, p: '[safir@login1 hla-study]$ ', t: 'sbatch run.sh' }, { at: 3, t: 'Submitted batch job 812345' }, { at: 8, p: '[safir@login1 hla-study]$ ', t: 'squeue -u safir' }, { at: 8, t: '  JOBID  NAME       ST  TIME  NODES\n 812345  hla-score  R   0:42  1' }],
+    steps: [
+      { n: 'ext-users', c: 'Safir connects with `ssh safir\x40hpc.example.edu`.' },
+      { n: 'tool-net', c: 'The same SSH journey as before, ending on a login node.' },
+      { n: 'shell', c: 'The login node is a shared front door for hundreds of users: edit, copy, submit. No heavy work here.' },
+      { n: 'app-data', c: '`sbatch run.sh` hands his job script to Slurm.' },
+      { n: 'svc', c: 'slurmctld, the cluster’s scheduling service, queues the job until 64 CPUs and 128 GB of memory are free.' },
+      { n: 'ext-other', c: 'A compute node elsewhere in the cluster is chosen. It is another full Linux tree.' },
+      { n: 'kernel', s: 'k-sched', c: 'There, slurmd starts his script within the resources Slurm allocated. How strictly they are enforced depends on the cluster’s configuration.' },
+      { n: 'hw-cpu', c: 'The CPU cores do the work. `squeue` and `sacct` report progress.' },
+      { n: 'hw-ssd', c: 'Results go to /work, the cluster’s project storage.', f: ['/work/safir'] },
+      { n: 'ext-users', c: 'He checks the output later, from anywhere, with another ssh.' }
+    ] },
+  docker: { story: 1, label: 'A Docker container', term: 'bash',
+    lines: [{ at: 0, p: 'safir@laptop:~$ ', t: 'docker run --rm -v "$PWD/data":/data hla-score:1.0' }, { at: 6, p: 'safir@laptop:~$ ', t: 'docker run --rm python:3.11-slim uname -r' }, { at: 6, t: '6.8.0-45-generic' }, { at: 6, c: '# same kernel version as the host' }],
+    steps: [
+      { n: 'ext-users', c: 'Safir runs `docker run --rm -v "$PWD/data":/data hla-score:1.0`.' },
+      { n: 'app-ctr', c: 'The docker command is only a messenger. It passes the request to the Docker service.' },
+      { n: 'svc', c: 'dockerd, running as root in the background (Docker’s conventional mode), finds the hla-score:1.0 image.', f: ['/var/lib/docker', '/var/lib/containerd'] },
+      { n: 'hw-ssd', c: 'The image’s read-only layers are stacked into one file tree with its own /usr and /lib, and a thin writable layer is added on top for this container.' },
+      { n: 'kernel', s: 'k-sec', c: 'The kernel creates namespaces: the container gets its own view of /, its own process list starting at 1, its own network. cgroups track its CPU and memory use; no limits apply here because none were requested.' },
+      { n: 'kernel', s: 'k-vfs', c: 'The -v option mounts his real data folder at /data inside the container.', f: ['/home/safir/projects/hla-study/data'] },
+      { n: 'kernel', s: 'k-sched', c: 'The app inside is an ordinary process on the same host kernel. No second kernel boots.' },
+      { n: 'app-ctr', c: 'score.py runs with the Python and pandas versions installed in the image.' },
+      { n: 'ext-users', c: 'Any machine that runs this exact image (same digest) gets the same packaged software; the host kernel, hardware and drivers can still differ. Files written outside /data disappear with the container.' }
+    ] },
+  cicd: { story: 1, label: 'A CI/CD pipeline', term: 'GitHub runner · bash',
+    lines: [{ at: 0, p: 'safir@laptop:~$ ', t: 'git push origin main' }, { at: 3, c: '# on the runner, each run step executes in a noninteractive shell' }, { at: 4, p: '$ ', t: 'python -m pip install -r requirements.txt' }, { at: 5, p: '$ ', t: 'python -m pytest' }, { at: 5, t: '12 passed' }, { at: 6, p: '$ ', t: 'docker build -t hla-score:ci .' }, { at: 9, c: '# GitHub records each step’s exit status: all 0, so the run is green' }],
+    steps: [
+      { n: 'ext-users', c: 'Safir runs `git push`. The commit travels over SSH or HTTPS to GitHub.' },
+      { n: 'ext-cloud', c: 'GitHub sees the push and starts a fresh Ubuntu virtual machine in the cloud, called a runner.' },
+      { n: 'svc', c: 'A runner service on that VM reads .github/workflows/test.yml.' },
+      { n: 'shell', c: 'Each `run` step executes its commands in a noninteractive shell.' },
+      { n: 'tool-pkg', c: '`python -m pip` installs the dependencies.' },
+      { n: 'app-dev', c: 'pytest runs the tests and exits with code 0 if they all pass.' },
+      { n: 'app-ctr', c: '`docker build` packages the code into an image. The tests ran in the runner, not in this image.' },
+      { n: 'tool-net', c: 'A deployment step, if added (the CD half), could push the image or update a server over SSH.' },
+      { n: 'ext-net', c: 'In a full CD setup, the new version would reach the server.' },
+      { n: 'ext-users', c: 'Green check: every step returned 0. A nonzero exit code would have failed the run.' }
+    ] }
+});
+Object.assign(SCEN, {
+  boot: { story: 1, label: 'Booting', term: 'genome01 · after boot',
+    lines: [{ at: 0, c: '# power button pressed' }, { at: 1, p: RP, t: 'ls /boot' }, { at: 1, t: 'config-6.8.0-45-generic  grub  initrd.img-6.8.0-45-generic  vmlinuz-6.8.0-45-generic' }, { at: 5, p: RP, t: 'ps -p 1 -o pid,comm' }, { at: 5, t: '    PID COMMAND\n      1 systemd' }],
+    steps: [
+      { n: 'hw-ssd', c: 'Power on. The firmware finds the disk and starts GRUB, the boot loader kept in /boot.', f: ['/boot/grub/grub.cfg'] },
+      { n: 'kernel', c: 'GRUB loads the kernel and an initial RAM file system into memory. The trunk is alive.', f: ['/boot'] },
+      { n: 'kernel', s: 'k-drivers', c: 'The kernel initializes devices and loads the required drivers. Many devices, including disks and terminals, appear as special files in /dev.', f: ['/dev'] },
+      { n: 'kernel', s: 'k-vfs', c: 'With help from the initial RAM file system, the main disk is found and mounted as /. The kernel also provides /proc and /sys, which live only in memory.', f: ['/proc', '/sys'] },
+      { n: 'kernel', s: 'k-sched', c: 'Control passes to the main startup program, /sbin/init, process number 1.', f: ['/sbin/init'] },
+      { n: 'svc', c: 'That program is systemd. It reads its settings in /etc and starts networking, logging, SSH and the login screen.', f: ['/etc/systemd', '/var/log'] },
+      { n: 'ext-users', c: 'The login prompt appears, and the system is ready.' }
+    ] },
+  proc: { story: 1, label: 'Health check', term: 'bash',
+    lines: [{ at: 0, p: RP, t: 'free -h' }, { at: 6, t: '               total   used   free  buff/cache  available\nMem:            62Gi   42Gi  2.1Gi        19Gi       20Gi' }],
+    steps: [
+      { n: 'ext-users', c: 'Safir types `free -h` to check memory.' },
+      { n: 'tool-proc', c: 'free does not measure anything itself. It opens the file /proc/meminfo.', f: ['/usr/bin/free', '/proc/meminfo'] },
+      { n: 'lib', c: 'glibc turns that into ordinary open() and read() system calls.' },
+      { n: 'kernel', s: 'k-vfs', c: 'The virtual file system sees that /proc is not a disk. It is procfs, a window into the kernel.' },
+      { n: 'kernel', s: 'k-mem', c: 'The memory manager writes the current numbers into the reply on the spot. The SSD is never touched.' },
+      { n: 'tool-proc', c: 'free formats the numbers into a table.' },
+      { n: 'ext-users', c: 'About 20 GiB is available, so this snapshot shows no system-wide memory pressure. Next he checks CPU activity with `top`.' }
+    ] }
+});
+Object.assign(KNOWN, {
+  '/etc/shadow': 'Password hashes. Restricted to privileged access.',
+  '/home/safir': 'Safir’s home folder. Its permissions let him create and change files here; other ordinary users usually cannot.',
+  '/home/safir/.ssh/authorized_keys': 'Public keys allowed to log in as this user over SSH.',
+  '/var/lib/docker': 'Docker’s data directory: containers, volumes and, with classic storage, image layers. Fresh Docker Engine 29+ installations keep images in /var/lib/containerd.',
+  '/dev/pts/0': 'A pseudoterminal: the kernel device that connects a terminal emulator (or an SSH session) to the shell running inside it.',
+  '/dev/kvm': 'The interface to KVM, the kernel’s virtualization module. QEMU and similar programs open it to run virtual machines with hardware acceleration.',
+  '/var/lib/containerd': 'Where containerd keeps image contents and container snapshots, the default image store for fresh Docker Engine 29+ installations.',
+  '/etc/apt/sources.list.d/ubuntu.sources': 'The software sources apt uses on Ubuntu 24.04 and later.',
+  '/etc/apt/sources.list': 'The classic list of software sources apt uses; newer Ubuntu releases keep it mostly empty and use sources.list.d/.',
+  '/home/safir/venvs/hla': 'A Python virtual environment: just a folder in his home.',
+  '/dev/nvidia0': 'The first NVIDIA GPU, exposed by its driver as a device file.',
+  '/sbin/init': 'The main startup program, process 1, started once the real root file system is mounted (an initramfs /init may run first). Usually a link to systemd.',
+  '/media/safir/BACKUP': 'Safir’s USB drive, mounted here automatically when he plugged it in.',
+  '/dev/sdb1': 'Partition 1 of the disk the kernel named sdb, here a USB drive. Shown as a file.'
+});
+
+/* =====================================================================
+   Build: system view
+   ===================================================================== */
+const defs = E('defs', null, svg);
+defs.innerHTML = `
+  <linearGradient id="gSoil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--soil2)"/><stop offset="1" style="stop-color:var(--soil1)"/></linearGradient>
+  <linearGradient id="gKernel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--kernel)"/><stop offset="1" style="stop-color:var(--kernel2)"/></linearGradient>
+  <radialGradient id="gGlobe" cx=".5" cy=".1" r=".9"><stop offset="0" stop-color="#3d7fc1"/><stop offset=".6" stop-color="#173d6e"/><stop offset="1" stop-color="#0b1f3d"/></radialGradient>
+  <filter id="fGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="fSoft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
+  <marker id="mArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--faint)"/></marker>`;
+
+const gSys = E('g', { id: 'gSys' }, svg);
+const gFs = E('g', { id: 'gFs' }, svg);
+gFs.setAttribute('hidden', '');
+
+const S = {}; // id -> node record (system)
+SYS.forEach(n => { const t = TIER[n.tier]; Object.assign(n, { x: n.cx - n.w / 2, y: t.y, h: t.h, ti: t.i }); S[n.id] = n; });
+const KS = {};
+KSUBS.forEach((k, i) => { k.cx = 411 + 40 + i * 86; k.y = 272; KS[k.id] = k; });
+
+function soil(parent, w, h, seed, ox, oy, depth) {
+  // wavy soil band
+  const r = rng(seed);
+  let d = `M0,0 H${w} V${h - 10}`;
+  for (let x = w; x >= 0; x -= 32) d += ` L${x},${h - 10 + (r() * 14 - 4)}`;
+  d += ' Z';
+  E('path', { d }, parent, { fill: 'url(#gSoil)' });
+  // root hairs growing upward from the trunk into the soil
+  const g = E('g', { opacity: '.55' }, parent);
+  function grow(x, y, ang, len, wdt, lvl) {
+    if (lvl > depth || len < 6) return;
+    const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+    if (y2 < 4) return;
+    const mx = (x + x2) / 2 + (r() - .5) * len * .4, my = (y + y2) / 2 + (r() - .5) * len * .3;
+    E('path', { d: `M${x},${y} Q${mx},${my} ${x2},${y2}`, 'stroke-width': wdt, 'stroke-linecap': 'round', fill: 'none' }, g, { stroke: 'var(--roothair)' });
+    const kids = 2 + (r() < .4 ? 1 : 0);
+    for (let k = 0; k < kids; k++) grow(x2, y2, ang + (r() - .5) * 1.3, len * (.62 + r() * .2), Math.max(.6, wdt * .62), lvl + 1);
+  }
+  for (let i = 0; i < 9; i++) grow(ox, oy, -Math.PI / 2 + (i - 4) * .33 + (r() - .5) * .2, 60 + r() * 30, 3.4, 0);
+}
+
+function buildSys() {
+  const g = gSys;
+  // foliage glow behind the leaves
+  const fol = E('g', { filter: 'url(#fSoft)', opacity: '.85' }, g);
+  const r = rng(7);
+  for (let i = 0; i < 26; i++) E('circle', { cx: 210 + r() * 920, cy: 600 + r() * 220, r: 40 + r() * 50 }, fol, { fill: 'var(--foliage)' });
+  // globe
+  E('ellipse', { cx: CX, cy: 1150, rx: 620, ry: 220 }, g, { fill: 'url(#gGlobe)' });
+  const gl = E('g', { opacity: '.25' }, g);
+  [560, 470, 360].forEach(rx => E('ellipse', { cx: CX, cy: 1150, rx, ry: 220 }, gl, { fill: 'none', stroke: '#bcd8f5' }));
+  [990, 1030].forEach(y => E('path', { d: `M${CX - 600},${y} Q${CX},${y - 70} ${CX + 600},${y}` }, gl, { fill: 'none', stroke: '#bcd8f5' }));
+
+  soil(g, 1216, 172, 11, CX, 168, 4);
+  const sig = E('g', { class: 'credit' }, g);
+  T(sig, CX, 980, 'Created by MD Shakhaowat Hossain', 't-credit', { fill: '#ffffff' });
+  T(sig, CX, 998, 'PhD Candidate · Tulane University School of Medicine', 't-credit-sub', { fill: '#cfe0f5' });
+
+  // decorative branches (bark) + flowing sap
+  const br = E('g', null, g), sap = E('g', null, g);
+  const B = (d, w) => { E('path', { d, class: 'branch', 'stroke-width': w }, br); E('path', { d, class: 'sap', 'stroke-width': Math.max(1.5, w / 4) }, sap); };
+  // roots into the trunk
+  SYS.filter(n => n.tier === 'hw').forEach(n => B(`M${n.cx},${n.y + n.h} C${n.cx},${n.y + n.h + 40} ${CX + (n.cx - CX) * .15},150 ${CX + (n.cx - CX) * .12},196`, 7));
+  B(`M${CX},140 V200`, 30);
+  const big = SYS.filter(n => n.tier === 'big'), small = SYS.filter(n => n.tier === 'small'), leaves = SYS.filter(n => n.tier === 'leaf');
+  big.forEach(n => B(`M${CX + (n.cx - CX) * .2},314 C${CX + (n.cx - CX) * .3},350 ${n.cx},335 ${n.cx},372`, 16));
+  small.forEach(n => { const p = big.reduce((a, b) => Math.abs(b.cx - n.cx) < Math.abs(a.cx - n.cx) ? b : a); B(`M${p.cx + (n.cx - p.cx) * .25},464 C${p.cx + (n.cx - p.cx) * .4},500 ${n.cx},492 ${n.cx},528`, 9); });
+  leaves.forEach(n => { B(`M${n.cx},608 C${n.cx - 8},630 ${n.cx + 8},648 ${n.cx},668`, 5); });
+  // twigs reaching out of each leaf card's sides
+  leaves.forEach(n => [[-1, 0], [1, 0]].forEach(([s]) => B(`M${n.cx + s * 40},${n.y + n.h} q${s * 20},26 ${s * 46},34`, 2.5)));
+  // outside world reaching the leaves
+  const arr = E('g', null, g);
+  leaves.forEach((n, i) => {
+    const sx = 360 + i * 150;
+    E('path', { d: `M${sx},840 C${sx},806 ${n.cx},800 ${n.cx},${n.y + n.h + 6}`, 'marker-end': 'url(#mArrow)', 'stroke-width': 1.6, 'stroke-dasharray': '4 4', fill: 'none' }, arr, { stroke: 'var(--faint)' });
+  });
+
+  // system call boundary
+  const sc = E('g', { class: 'node', tabindex: 0, role: 'button', 'aria-label': 'System call interface', 'data-id': 'syscall' }, g);
+  E('rect', { x: 176, y: 326, width: 1010, height: 26, class: 'face', rx: 6 }, sc, { fill: 'transparent', stroke: 'transparent' });
+  E('line', { x1: 180, y1: 339, x2: 1180, y2: 339, 'stroke-width': 1.5, 'stroke-dasharray': '7 5' }, sc, { stroke: 'var(--kernel)' });
+  const lbl = T(sc, 186, 334, 'SYSTEM CALL INTERFACE', 't-rail-k', { fill: 'var(--kernel)' }, 'start');
+  T(sc, 1180, 334, '▲ kernel space', 't-rail-k', { fill: 'var(--muted)' }, 'end');
+  T(sc, 1180, 356, '▼ user space', 't-rail-k', { fill: 'var(--muted)' }, 'end');
+  sc.addEventListener('click', () => pick('syscall'));
+  sc.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick('syscall'); } });
+
+  // rail: metaphor labels
+  const rail = E('g', null, g);
+  RAIL.forEach(rr => {
+    const t = TIER[rr.tier], cy = t.y + t.h / 2;
+    const onSoil = rr.tier === 'hw';
+    const top = cy - 30;
+    T(rail, 16, top, rr.k, 't-rail-k', { fill: onSoil ? 'var(--sap)' : 'var(--bark)' }, 'start');
+    T(rail, 16, top + 19, rr.t, 't-rail-t', { fill: onSoil ? '#fff' : 'var(--ink)' }, 'start');
+    wrap(rr.n, 24).forEach((ln, i) => T(rail, 16, top + 36 + i * 14, ln, 't-rail-n', { fill: onSoil ? '#e8d7c2' : 'var(--muted)' }, 'start'));
+  });
+
+  // layers for trails, then nodes, then token
+  const trails = E('g', { id: 'sysTrails' }, g);
+  const nodes = E('g', null, g);
+  SYS.forEach(n => drawSysNode(nodes, n));
+  const token = E('circle', { r: 8, class: 'token', filter: 'url(#fGlow)' }, g, { fill: 'var(--gold)', display: 'none' });
+  return { trails, token };
+}
+
+function nodeShell(parent, n, label) {
+  const grp = E('g', { class: 'node', tabindex: 0, role: 'button', 'aria-label': label, 'data-id': n.id }, parent);
+  grp.style.setProperty('--glow', `var(${n.color})`);
+  grp.addEventListener('click', e => { if (!e.target.closest('.subchip')) pick(n.id); });
+  grp.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === grp) { e.preventDefault(); pick(n.id); } });
+  n.el = grp;
+  return grp;
+}
+
+function drawSysNode(parent, n) {
+  const g = nodeShell(parent, n, n.title.replace('\n', ' '));
+  const { x, y, w, h } = n;
+  const ring = () => { E('rect', { x: x - 5, y: y - 5, width: w + 10, height: h + 10, rx: 15, class: 'ring' }, g); E('rect', { x: x - 9, y: y - 9, width: w + 18, height: h + 18, rx: 18, class: 'sel' }, g); };
+  if (n.tier === 'hw') {
+    E('rect', { x, y, width: w, height: h, rx: 10, class: 'face' }, g, { fill: 'var(--chip)', stroke: '#8fa3b6', strokeWidth: 1.2 });
+    // chip pins
+    for (let i = 0; i < 6; i++) { const px = x + 22 + i * ((w - 44) / 5); E('rect', { x: px - 2, y: y - 5, width: 4, height: 5 }, g, { fill: '#8fa3b6' }); E('rect', { x: px - 2, y: y + h, width: 4, height: 5 }, g, { fill: '#8fa3b6' }); }
+    T(g, n.cx, y + 34, n.title, 't-title', { fill: 'var(--chip-ink)' });
+    T(g, n.cx, y + 55, n.sub, 't-sub', { fill: '#a9b9c8' });
+  } else if (n.tier === 'kernel') {
+    E('rect', { x, y, width: w, height: h, rx: 14, class: 'face' }, g, { fill: 'url(#gKernel)', stroke: '#ffb199', strokeWidth: 1.5 });
+    drawTux(g, x + 40, y + 8);
+    T(g, x + 98, y + 40, n.title, 't-kernel', { fill: 'var(--on-color)' }, 'start');
+    T(g, x + 98, y + 62, 'The trunk: manages hardware, memory, processes and security', 't-sub', { fill: '#ffe1d6' }, 'start');
+    KSUBS.forEach(k => {
+      const cg = E('g', { class: 'subchip', tabindex: 0, role: 'button', 'aria-label': k.name, 'data-sub': k.id }, g);
+      E('rect', { x: k.cx - 40, y: k.y, width: 80, height: 28, rx: 7 }, cg);
+      T(cg, k.cx, k.y + 18.5, k.label, 't-mono', { fontSize: '11.5px' });
+      cg.addEventListener('click', () => pick(k.id));
+      cg.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(k.id); } });
+      k.el = cg;
+    });
+  } else if (n.tier === 'big') {
+    E('rect', { x, y, width: w, height: h, rx: 12, class: 'face' }, g, { fill: `var(${n.color})`, stroke: 'rgba(255,255,255,.35)', strokeWidth: 1.2 });
+    T(g, n.cx, y + 29, n.title, 't-big', { fill: 'var(--on-color)' });
+    T(g, n.cx, y + 50, n.mono, 't-mono', { fill: 'rgba(255,255,255,.82)' });
+    T(g, n.cx, y + 73, n.sub, 't-sub', { fill: 'rgba(255,255,255,.92)' });
+  } else if (n.tier === 'small') {
+    E('rect', { x, y, width: w, height: h, rx: 11, class: 'face' }, g, { fill: 'var(--tool)', stroke: 'rgba(255,255,255,.25)', strokeWidth: 1.2 });
+    n.title.split('\n').forEach((ln, i) => T(g, n.cx, y + 25 + i * 18, ln, 't-title', { fill: 'var(--on-color)' }));
+    T(g, n.cx, y + 66, n.mono, 't-mono', { fill: '#a8d2ee', fontSize: '11.5px' });
+  } else if (n.tier === 'leaf') {
+    E('rect', { x, y, width: w, height: h, rx: 12, class: 'face' }, g, { fill: 'var(--leaf-bg)', stroke: 'var(--leaf)', strokeWidth: 1.6 });
+    T(g, n.cx, y + 25, n.title, 't-title', { fill: 'var(--ink)' });
+    // wrap pills into rows
+    const rows = [[]]; let used = 0; const cap = w - 20;
+    n.pills.forEach(p => { const pw = p.length * 7.3 + 16; if (used + pw > cap && rows[rows.length - 1].length) { rows.push([]); used = 0; } rows[rows.length - 1].push([p, pw]); used += pw + 6; });
+    rows.forEach((row, ri) => {
+      const tot = row.reduce((a, [, pw]) => a + pw, 0) + (row.length - 1) * 6;
+      let px = n.cx - tot / 2; const py = y + 38 + ri * 26;
+      row.forEach(([p, pw]) => { E('rect', { x: px, y: py, width: pw, height: 20, rx: 10 }, g, { fill: 'none', stroke: 'var(--leaf)', strokeWidth: 1 }); T(g, px + pw / 2, py + 14, p, 't-mono', { fill: 'var(--ink)', fontSize: '11.5px' }); px += pw + 6; });
+    });
+  } else if (n.tier === 'ext') {
+    const first = n.id === 'ext-other', last = n.id === 'ext-users';
+    E('rect', { x, y, width: w, height: h, rx: first || last ? 14 : 0, class: 'face' }, g, { fill: 'var(--ext)', stroke: 'rgba(255,255,255,.3)', strokeWidth: 1 });
+    T(g, n.cx, y + 31, n.title, 't-title', { fill: 'var(--on-color)', fontSize: '16px' });
+    T(g, n.cx, y + 52, n.sub, 't-sub', { fill: '#bcd2ee' });
+  }
+  ring();
+}
+
+function drawTux(g, x, y) {
+  // a small, simplified penguin built from basic shapes
+  const p = E('g', { transform: `translate(${x},${y}) scale(.68)` }, g);
+  E('ellipse', { cx: 26, cy: 48, rx: 22, ry: 30 }, p, { fill: '#111' });
+  E('ellipse', { cx: 26, cy: 54, rx: 15, ry: 22 }, p, { fill: '#fafafa' });
+  E('circle', { cx: 26, cy: 22, r: 15 }, p, { fill: '#111' });
+  E('ellipse', { cx: 21, cy: 20, rx: 4, ry: 5 }, p, { fill: '#fff' });
+  E('ellipse', { cx: 31, cy: 20, rx: 4, ry: 5 }, p, { fill: '#fff' });
+  E('circle', { cx: 22, cy: 21, r: 1.8 }, p, { fill: '#111' });
+  E('circle', { cx: 30, cy: 21, r: 1.8 }, p, { fill: '#111' });
+  E('path', { d: 'M19,28 Q26,24 33,28 Q26,35 19,28 Z' }, p, { fill: '#f5b120' });
+  E('ellipse', { cx: 15, cy: 79, rx: 10, ry: 4.5 }, p, { fill: '#f5b120' });
+  E('ellipse', { cx: 37, cy: 79, rx: 10, ry: 4.5 }, p, { fill: '#f5b120' });
+}
+
+/* ---------- routing for the system view ---------- */
+const TIER_ORDER = ['hw', 'kernel', 'big', 'small', 'leaf', 'ext'];
+function gapsAt(tier) {
+  const ns = SYS.filter(n => n.tier === tier).sort((a, b) => a.cx - b.cx);
+  const g = [];
+  for (let i = 0; i < ns.length - 1; i++) g.push((ns[i].x + ns[i].w + ns[i + 1].x) / 2);
+  return g;
+}
+function ortho(pts, r) {
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1], [cx, cy] = pts[i], [nx, ny] = pts[i + 1];
+    const d1 = Math.hypot(cx - px, cy - py), d2 = Math.hypot(nx - cx, ny - cy);
+    const rr = Math.min(r, d1 / 2, d2 / 2);
+    const ax = cx - (cx - px) / d1 * rr, ay = cy - (cy - py) / d1 * rr;
+    const bx = cx + (nx - cx) / d2 * rr, by = cy + (ny - cy) / d2 * rr;
+    d += ` L${ax},${ay} Q${cx},${cy} ${bx},${by}`;
+  }
+  const l = pts[pts.length - 1];
+  return d + ` L${l[0]},${l[1]}`;
+}
+function anchorX(n, sub) { return n.id === 'kernel' && sub ? KS[sub].cx : n.cx; }
+function sysRoute(a, b) {
+  const A = S[a.n], B = S[b.n];
+  if (A === B) return null;
+  const ax = anchorX(A, a.s), bx = anchorX(B, b.s);
+  // long hops between the outside world and the hardware run up the right-hand margin
+  if ((A.tier === 'ext' && B.tier === 'hw') || (A.tier === 'hw' && B.tier === 'ext')) {
+    const E_ = A.tier === 'ext' ? A : B, H = A.tier === 'hw' ? A : B;
+    let pts;
+    if (E_.id === 'ext-users') pts = [[E_.x + E_.w, E_.y + E_.h / 2], [1168, E_.y + E_.h / 2], [1168, 36], [H.cx, 36], [H.cx, H.y]];
+    else pts = [[E_.cx, E_.y + E_.h], [E_.cx, 944], [1196, 944], [1196, 22], [H.cx, 22], [H.cx, H.y]];
+    if (A !== E_) pts.reverse();
+    return ortho(pts, 18);
+  }
+  if (A.tier === B.tier) {
+    const y = A.y + A.h, cy = y + 44;
+    return `M${ax},${y} C${ax},${cy} ${bx},${cy} ${bx},${B.y + B.h}`;
+  }
+  const down = B.ti > A.ti;
+  const pts = [[ax, down ? A.y + A.h : A.y]];
+  const end = [bx, down ? B.y : B.y + B.h];
+  const lo = Math.min(A.ti, B.ti), hi = Math.max(A.ti, B.ti);
+  const mids = [];
+  for (let t = lo + 1; t < hi; t++) {
+    const tier = TIER_ORDER[t], ty = TIER[tier];
+    const frac = (t - A.ti) / (B.ti - A.ti);
+    const want = ax + (bx - ax) * frac;
+    const gaps = tier === 'kernel' ? [S.kernel.x - 26, S.kernel.x + S.kernel.w + 26] : gapsAt(tier);
+    const gx = gaps.reduce((p, c) => Math.abs(c - want) < Math.abs(p - want) ? c : p);
+    mids.push([gx, ty.y - 6], [gx, ty.y + ty.h + 6]);
+  }
+  if (!down) mids.reverse();
+  pts.push(...mids, end);
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [px, py] = pts[i - 1], [qx, qy] = pts[i], dy = (qy - py) * .5;
+    d += ` C${px},${py + dy} ${qx},${qy - dy} ${qx},${qy}`;
+  }
+  return d;
+}
+
+/* =====================================================================
+   Build: file-system view
+   ===================================================================== */
+const F = {};
+const FS_W = 1216, FS_H = 790;
+function buildFs() {
+  const g = gFs;
+  const r = rng(3);
+  const fol = E('g', { filter: 'url(#fSoft)', opacity: '.6' }, g);
+  for (let i = 0; i < 18; i++) E('circle', { cx: 60 + r() * 1100, cy: 330 + r() * 330, r: 40 + r() * 50 }, fol, { fill: 'var(--foliage)' });
+  soil(g, FS_W, 148, 5, 608, 130, 4);
+  const br = E('g', null, g), sap = E('g', null, g);
+  const B = (d, w) => { E('path', { d, class: 'branch', 'stroke-width': w }, br); E('path', { d, class: 'sap', 'stroke-width': Math.max(1.5, w / 4) }, sap); };
+  const root = { id: 'root', x: 548, y: 56, w: 120, h: 62, cx: 608, color: '--kernel', kind: 'root' };
+  F.root = root;
+  B('M608,118 V160', 22);
+  CATS.forEach((c, i) => {
+    Object.assign(c, { kind: 'cat', cx: 134 + i * 189, w: 172, h: 62, y: 196 }); c.x = c.cx - 86; F[c.id] = c;
+    B(`M${608 + (c.cx - 608) * .08},158 C${608 + (c.cx - 608) * .3},186 ${c.cx},168 ${c.cx},196`, 10);
+    const col = DIRS.filter(d => d.cat === c.id);
+    col.forEach((d, k) => { Object.assign(d, { kind: 'dir', id: 'd' + d.d, cx: c.cx, w: 172, h: 58, y: 296 + k * 70 }); d.x = d.cx - 86; F[d.id] = d; });
+    const last = col[col.length - 1];
+    B(`M${c.cx},258 V${last.y + 40}`, 6);
+  });
+  // legend
+  const lg = E('g', null, g);
+  T(lg, 40, 740, 'A common teaching selection, not a list set by any standard.', 't-sub', { fill: 'var(--muted)' }, 'start');
+  T(lg, 40, 768, 'The six coloured groups are a teaching aid. In the file hierarchy, every directory shown here sits directly under /.', 't-sub', { fill: 'var(--muted)' }, 'start');
+  T(lg, 1176, 750, 'Created by MD Shakhaowat Hossain', 't-credit', { fill: 'var(--ink)' }, 'end');
+  T(lg, 1176, 768, 'PhD Candidate · Tulane University School of Medicine', 't-credit-sub', { fill: 'var(--muted)' }, 'end');
+
+  const trails = E('g', null, g);
+  const nodes = E('g', null, g);
+  // root node
+  const rg = nodeShell(nodes, root, 'Root directory /');
+  E('rect', { x: root.x, y: root.y, width: root.w, height: root.h, rx: 14, class: 'face' }, rg, { fill: 'url(#gKernel)', stroke: '#ffb199', strokeWidth: 1.5 });
+  T(rg, 608, 96, '/', 't-kernel', { fill: '#fff', fontFamily: 'var(--f-mono)', fontSize: '34px' });
+  T(rg, 608, 40, 'THE ROOT DIRECTORY', 't-rail-k', { fill: 'var(--sap)' });
+  E('rect', { x: root.x - 5, y: root.y - 5, width: root.w + 10, height: root.h + 10, rx: 17, class: 'ring' }, rg);
+  E('rect', { x: root.x - 9, y: root.y - 9, width: root.w + 18, height: root.h + 18, rx: 20, class: 'sel' }, rg);
+  CATS.forEach(c => {
+    const cg = nodeShell(nodes, c, c.title);
+    E('rect', { x: c.x, y: c.y, width: c.w, height: c.h, rx: 12, class: 'face' }, cg, { fill: `var(${c.color})`, stroke: 'rgba(255,255,255,.3)' });
+    T(cg, c.cx, c.y + 27, c.title, 't-title', { fill: '#fff' });
+    T(cg, c.cx, c.y + 46, c.sub, 't-sub', { fill: 'rgba(255,255,255,.88)' });
+    E('rect', { x: c.x - 5, y: c.y - 5, width: c.w + 10, height: c.h + 10, rx: 15, class: 'ring' }, cg);
+    E('rect', { x: c.x - 9, y: c.y - 9, width: c.w + 18, height: c.h + 18, rx: 18, class: 'sel' }, cg);
+  });
+  DIRS.forEach(d => {
+    const c = F[d.cat]; d.color = c.color;
+    const dg = nodeShell(nodes, d, d.d);
+    E('rect', { x: d.x, y: d.y, width: d.w, height: d.h, rx: 10, class: 'face', 'stroke-dasharray': 'none' }, dg, { fill: 'var(--panel)', stroke: `var(${c.color})`, strokeWidth: 1.8 });
+    E('circle', { cx: d.x + 16, cy: d.y + 21, r: 5 }, dg, { fill: `var(${c.color})` });
+    T(dg, d.x + 28, d.y + 26, d.d, 't-dir', { fill: 'var(--ink)' }, 'start');
+    d.subEl = T(dg, d.x + 14, d.y + 45, d.sub, 't-sub', { fill: 'var(--muted)' }, 'start');
+    E('rect', { x: d.x - 5, y: d.y - 5, width: d.w + 10, height: d.h + 10, rx: 13, class: 'ring' }, dg);
+    E('rect', { x: d.x - 9, y: d.y - 9, width: d.w + 18, height: d.h + 18, rx: 16, class: 'sel' }, dg);
+  });
+  const token = E('circle', { r: 8, class: 'token', filter: 'url(#fGlow)' }, g, { fill: 'var(--gold)', display: 'none' });
+  return { trails, token };
+}
+function fsRoute(a, b) {
+  const A = F[a.n], B = F[b.n];
+  if (!A || !B || A === B) return null;
+  if (A.kind === 'root' && B.kind === 'cat') return `M608,118 V158 C${608 + (B.cx - 608) * .3},186 ${B.cx},168 ${B.cx},196`;
+  if ((A.kind === 'cat' || A.kind === 'dir') && B.kind === 'dir' && A.cx === B.cx && B.y > A.y) return `M${A.cx},${A.y + A.h} V${B.y}`;
+  return null;
+}
+
+/* =====================================================================
+   Player: moves a glowing token along routes, one step at a time
+   ===================================================================== */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+// On narrow screens the diagram scrolls sideways; keep the active part in view (instantly when motion is reduced)
+const diagramBox = document.querySelector('.diagram');
+const overflowing = () => diagramBox.scrollWidth > diagramBox.clientWidth + 1;
+function followNode(el) {
+  if (!el || !overflowing()) return;
+  const r = el.getBoundingClientRect(), b = diagramBox.getBoundingClientRect();
+  diagramBox.scrollTo({ left: diagramBox.scrollLeft + (r.left + r.width / 2) - (b.left + b.width / 2), behavior: REDUCE ? 'auto' : 'smooth' });
+}
+function centerDiagram() { if (overflowing()) diagramBox.scrollLeft = (diagramBox.scrollWidth - diagramBox.clientWidth) / 2; }
+class Player {
+  constructor(o) { Object.assign(this, o); this.idx = -1; this.run = 0; this.playing = false; this.loop = true; }
+  setSteps(steps, loop = true) { this.steps = steps; this.loop = loop; this.reset(); }
+  reset() { this.run++; this.idx = -1; this.trails.innerHTML = ''; this.token.style.display = 'none'; this.mark(-1); this.onReset && this.onReset(); }
+  mark(i) {
+    for (const k in this.nodes) { const n = this.nodes[k]; if (n.el) n.el.classList.remove('active', 'visited'); }
+    KSUBS.forEach(k => k.el && k.el.classList.remove('active'));
+    if (i < 0) return;
+    for (let j = 0; j < i; j++) { const n = this.nodes[this.steps[j].n]; n && n.el.classList.add('visited'); }
+    const st = this.steps[i], n = this.nodes[st.n];
+    if (n) { n.el.classList.remove('visited'); n.el.classList.add('active'); this.raise(n.el); }
+    if (st.s && KS[st.s]) KS[st.s].el.classList.add('active');
+    if (n) followNode(st.s && KS[st.s] ? KS[st.s].el : n.el);
+    this.onArrive && this.onArrive(i, st);
+  }
+  raise(el) { el.parentNode.appendChild(el); }
+  color(st) { const n = this.nodes[st.n]; return n ? `var(${n.color === '--chip' ? '--gold' : n.color === '--tool' ? '--focus' : n.color})` : 'var(--gold)'; }
+  async go(i, animate) {
+    const my = this.run, st = this.steps[i], prev = i > 0 ? this.steps[i - 1] : null;
+    Array.from(this.trails.children).forEach(p => p.classList.add('old'));
+    const d = prev ? this.route(prev, st) : null;
+    if (d) {
+      const p = E('path', { d, class: 'trail' }, this.trails, { stroke: this.color(st) });
+      if (animate) await this.tween(p, this.color(st), my);
+    }
+    if (my !== this.run) return false;
+    this.idx = i; this.mark(i);
+    if (!animate || !d) { const n = this.nodes[st.n]; if (n && !REDUCE) this.place(n); }
+    return true;
+  }
+  place(n) { this.token.style.display = ''; this.token.setAttribute('cx', n.cx); this.token.setAttribute('cy', n.y + n.h / 2); this.token.style.fill = this.color({ n: n.id }); }
+  tween(path, color, my) {
+    return new Promise(res => {
+      const L = path.getTotalLength(), dur = Math.max(650, Math.min(1500, L * 1.5)), t0 = performance.now();
+      const tk = this.token; tk.style.display = ''; tk.style.fill = color;
+      const f = now => {
+        if (my !== this.run) return res();
+        const t = Math.min(1, (now - t0) / dur), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const pt = path.getPointAtLength(L * e);
+        tk.setAttribute('cx', pt.x); tk.setAttribute('cy', pt.y);
+        t < 1 ? requestAnimationFrame(f) : res();
+      };
+      requestAnimationFrame(f);
+    });
+  }
+  async play() {
+    this.playing = true; const my = ++this.run;
+    while (this.playing && my === this.run) {
+      if (this.idx >= this.steps.length - 1) {
+        if (!this.loop) { this.playing = false; this.onStop && this.onStop(); return; }
+        await sleep(2600); if (my !== this.run || !this.playing) return;
+        this.reset(); this.run = my; setLive(false); await sleep(350);
+        if (my !== this.run || !this.playing) return;
+      }
+      const ok = await this.go(this.idx + 1, true);
+      if (!ok || my !== this.run) return;
+      await sleep(this.hold);
+    }
+  }
+  pause() { this.playing = false; this.run++; if (this.idx >= 0) this.mark(this.idx); }
+  step() {
+    this.pause();
+    if (this.idx >= this.steps.length - 1) return;
+    this.go(this.idx + 1, !REDUCE);
+  }
+  // jump to step t without animation, redrawing the trail walked so far (t < 0 returns to the start)
+  jump(t) {
+    this.pause();
+    if (t < 0) { this.reset(); return; }
+    this.trails.innerHTML = '';
+    for (let i = 1; i <= t; i++) { const d = this.route(this.steps[i - 1], this.steps[i]); if (d) E('path', { d, class: i === t ? 'trail' : 'trail old' }, this.trails, { stroke: this.color(this.steps[i]) }); }
+    this.idx = t; this.mark(t);
+    const n = this.nodes[this.steps[t].n];
+    if (n && !REDUCE) this.place(n); else this.token.style.display = 'none';
+  }
+  atEnd() { return this.idx >= this.steps.length - 1; }
+  showAll() { // static, fully lit diagram for reduced motion
+    this.trails.innerHTML = '';
+    for (let i = 1; i < this.steps.length; i++) { const d = this.route(this.steps[i - 1], this.steps[i]); if (d) E('path', { d, class: 'trail old' }, this.trails, { stroke: this.color(this.steps[i]) }); }
+    for (const k in this.nodes) { const n = this.nodes[k]; n.el && n.el.classList.remove('active'); }
+    this.steps.forEach(s => { const n = this.nodes[s.n]; n && n.el.classList.add('visited'); });
+  }
+}
+
+/* =====================================================================
+   UI wiring
+   ===================================================================== */
+const sysParts = buildSys();
+const fsParts = buildFs();
+const capStep = $('capStep'), capText = $('capText'), filesEl = $('files'), termEl = $('term');
+let view = 'sys', scenKey = 'ls', selected = null, lastCapNode = null, storyReturn = null;
+
+const sysPlayer = new Player({ nodes: S, route: sysRoute, trails: sysParts.trails, token: sysParts.token, hold: 1050,
+  // the details panel follows the highlighted part at each step
+  onArrive: (i, st) => { setCaption(i, st, SCEN[scenKey].steps.length); renderTerm(i); select(st.s && KS[st.s] ? st.s : st.n); syncPlayBtn(); },
+  onReset: () => { introCaption(); renderTerm(-1); },
+  onStop: () => syncPlayBtn() });
+const fsPlayer = new Player({ nodes: F, route: fsRoute, trails: fsParts.trails, token: fsParts.token, hold: 900,
+  onArrive: (i, st) => { setCaption(i, st, fsPlayer.steps.length); fsTerm(st); if (F[st.n]) select(st.n); syncPlayBtn(); },
+  onReset: () => { introCaption(); },
+  onStop: () => syncPlayBtn() });
+
+function nodeName(id) {
+  if (S[id]) return S[id].title.replace('\n', ' ');
+  if (KS[id]) return KS[id].name;
+  if (id === 'root') return '/';
+  if (F[id]) return F[id].d || F[id].title;
+  return '';
+}
+function setCaption(i, st, total) {
+  lastCapNode = st.s || st.n;
+  capStep.disabled = false;
+  capStep.textContent = `${String(i + 1).padStart(2, '0')}/${total} · ${st.s ? KS[st.s].label : nodeName(st.n)}`;
+  capText.innerHTML = md(st.c);
+  filesEl.innerHTML = '';
+  if (st.f && st.f.length) {
+    const s = document.createElement('span'); s.textContent = 'Files involved:'; filesEl.appendChild(s);
+    st.f.forEach(p => filesEl.appendChild(pathChip(p)));
+  }
+}
+function introCaption() {
+  capStep.disabled = true; capStep.textContent = 'Ready';
+  capText.innerHTML = view === 'sys'
+    ? md('Each task plays step by step and repeats until you press Pause; Previous and Next move one hand-off at a time. Gold rings mark the layers a task has already passed.')
+    : md('The tour of the top-level directories plays step by step and repeats; press Pause to stop. Or type a path above and press Locate. The explorer reads the path as text; it does not check your computer.');
+  filesEl.innerHTML = '';
+}
+function pathChip(p) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'pathchip'; b.textContent = p;
+  b.title = 'Show where this lives in the file system';
+  b.addEventListener('click', () => { const ch = b.closest('.chapter'); if (ch) storyReturn = ch.id; switchView('fs'); if (storyReturn) $('backBtn').hidden = false; $('pathInput').value = p; trace(p); });
+  return b;
+}
+function renderTerm(i) {
+  const sc = SCEN[scenKey];
+  $('termTitle').textContent = sc.term; $('termNote').textContent = 'example session';
+  const html = sc.lines.filter(l => l.at <= Math.max(i, 0) && (i >= 0 || l.at === 0)).map(l => {
+    if (l.c) return `<span class="c">${esc(l.c)}</span>`;
+    return (l.p ? `<span class="p">${esc(l.p)}</span>` : '') + esc(l.t) + (l.cur ? '<span class="cur"></span>' : '');
+  }).join('\n');
+  termEl.innerHTML = html;
+}
+function fsTerm(st) {
+  const n = F[st.n]; let p = '/';
+  if (n && n.kind === 'dir') p = n.d; if (st.path) p = st.path;
+  $('termTitle').textContent = 'bash'; $('termNote').textContent = 'try it';
+  const tries = n && n.kind === 'dir' ? n.tries : ROOTINFO.tries;
+  const top = p.split('/').slice(0, 2).join('/') || '/';
+  if (top === '/root') {
+    // /root is owner-only on Ubuntu, so an ordinary user is refused
+    termEl.innerHTML = `<span class="p">you@linux:~$ </span>ls -ld /root\ndrwx------ 5 root root 4096 Oct 12 08:30 /root\n<span class="p">you@linux:~$ </span>cd /root\nbash: cd: /root: Permission denied\n` +
+      (tries || []).map(([c, note]) => `<span class="p">$ </span>${esc(c)}${note ? `  <span class="c"># ${esc(note)}</span>` : ''}`).join('\n');
+    return;
+  }
+  termEl.innerHTML = `<span class="p">you@linux:~$ </span>cd ${esc(p.split('/').slice(0, 2).join('/') || '/')}\n<span class="p">you@linux:${esc(p.split('/').slice(0, 2).join('/') || '/')}$ </span>pwd\n${esc(p.split('/').slice(0, 2).join('/') || '/')}\n` +
+    (tries || []).map(([c, note]) => `<span class="p">$ </span>${esc(c)}${note ? `  <span class="c"># ${esc(note)}</span>` : ''}`).join('\n');
+}
+
+/* ---- details panel ---- */
+const detail = $('detail');
+function tierEye(color, text) { return `<p class="d-eye"><i style="background:var(${color})"></i>${esc(text)}</p>`; }
+function triesHtml(tries) {
+  if (!tries || !tries.length) return '';
+  return `<h3>Try it in a terminal</h3><pre class="tries">${tries.map(([c, n]) => `<span class="p">$</span> ${esc(c)}${n ? `\n  <span class="c"># ${esc(n)}</span>` : ''}`).join('\n')}</pre>`;
+}
+function select(id) {
+  document.querySelectorAll('.node.selected, .subchip.selected').forEach(e => e.classList.remove('selected'));
+  selected = id;
+  let html = '';
+  if (S[id]) {
+    const n = S[id], t = TIER[n.tier];
+    n.el.classList.add('selected');
+    html = tierEye(n.color === '--chip' ? '--gold' : n.color, `${t.label} · in the tree: ${t.meta.toLowerCase()}`) +
+      `<h2>${esc(n.title.replace('\n', ' '))}</h2><p>${md(n.what)}</p>` +
+      `<h3>Real examples</h3><ul class="pills">${n.ex.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` + triesHtml(n.tries);
+    if (n.id === 'kernel') html += `<p class="hint">Click a subsystem chip inside the kernel for more.</p>`;
+    if (n.paths && n.paths.length) html += `<h3>Related files and interfaces</h3><div class="files" data-paths></div>`;
+  } else if (KS[id]) {
+    const k = KS[id]; S.kernel.el.classList.add('selected'); k.el.classList.add('selected');
+    html = tierEye('--kernel', 'Kernel subsystem · part of the trunk') + `<h2>${esc(k.name)}</h2><p>${md(k.what)}</p>` + triesHtml(k.tries) +
+      (k.paths.length ? `<h3>Related files and interfaces</h3><div class="files" data-paths></div>` : '');
+  } else if (id === 'syscall') {
+    html = tierEye('--kernel', 'Boundary · where the bark meets the wood') + `<h2>${esc(SYSCALL.title)}</h2><p>${md(SYSCALL.what)}</p>` +
+      `<h3>Real examples</h3><ul class="pills">${SYSCALL.ex.map(x => `<li><code>${esc(x)}</code></li>`).join('')}</ul>` + triesHtml(SYSCALL.tries);
+  } else if (id === 'root') {
+    F.root.el.classList.add('selected');
+    html = tierEye('--kernel', 'The root of the tree') + `<h2>${esc(ROOTINFO.title)}</h2><p>${md(ROOTINFO.what)}</p>` + triesHtml(ROOTINFO.tries) +
+      `<div class="note">/root is a different thing: it is the home folder of the root user.</div>`;
+  } else if (F[id] && F[id].kind === 'cat') {
+    const c = F[id]; c.el.classList.add('selected');
+    const ds = DIRS.filter(d => d.cat === id);
+    html = tierEye(c.color, 'Group · a large branch') + `<h2>${esc(c.title)}</h2><p>${esc(c.sub[0].toUpperCase() + c.sub.slice(1))}. This group holds:</p>` +
+      `<div class="files" data-dirs></div><p class="hint">Groups are only a teaching aid; Linux has no folder for them.</p>`;
+  } else if (F[id] && F[id].kind === 'dir') {
+    const d = F[id]; d.el.classList.add('selected');
+    html = tierEye(d.color, `Top-level directory · ${F[d.cat].title}`) + `<h2><code style="background:none;padding:0;font-size:1em">${esc(d.d)}</code></h2><p>${md(d.what)}</p>` +
+      `<h3>Examples</h3><ul class="pills">${d.ex.map(x => `<li><code>${esc(x)}</code></li>`).join('')}</ul>` + triesHtml(d.tries) +
+      (d.note ? `<div class="note">${md(d.note)}</div>` : '');
+  }
+  detail.innerHTML = html;
+  const pc = detail.querySelector('[data-paths]');
+  if (pc) ((S[id] && S[id].paths) || (KS[id] && KS[id].paths) || []).forEach(p => pc.appendChild(pathChip(p)));
+  const dc = detail.querySelector('[data-dirs]');
+  if (dc) DIRS.filter(d => d.cat === id).forEach(d => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pathchip'; b.textContent = d.d; b.addEventListener('click', () => pick(d.id)); dc.appendChild(b); });
+}
+capStep.addEventListener('click', () => { if (lastCapNode) pick(lastCapNode); });
+// a learner's own selection pauses the animation, so the details they chose stay on screen
+// pause() also cancels a step still moving after Next or Previous
+function pick(id) { player().pause(); syncPlayBtn(); select(id); if (view === 'fs' && F[id]) fsTerm({ n: id }); }
+
+/* ---- scenarios ---- */
+const scenBar = $('scenBar');
+Object.entries(SCEN).filter(([, sc]) => !sc.story).forEach(([k, sc]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.innerHTML = sc.label; b.dataset.k = k;
+  b.setAttribute('aria-pressed', k === scenKey);
+  b.addEventListener('click', () => setScenario(k, true));
+  scenBar.appendChild(b);
+});
+// captions are announced to screen readers only after the viewer starts or steps an animation
+function setLive(on) { $('capBox').setAttribute('aria-live', on ? 'polite' : 'off'); }
+function setScenario(k, autoplay, auto = false) {
+  scenKey = k; setLive(!auto);
+  scenBar.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.k === k));
+  sysPlayer.pause();
+  sysPlayer.setSteps(SCEN[k].steps, true);
+  if (REDUCE) { sysPlayer.showAll(); renderTerm(99); syncPlayBtn(); return; }
+  if (autoplay) sysPlayer.play();
+  syncPlayBtn();
+}
+
+/* ---- file-system tour + path tracing ---- */
+function fsTour() {
+  const steps = [];
+  CATS.forEach(c => {
+    steps.push({ n: 'root', c: c === CATS[0] ? 'Everything starts at `/`, the root directory. The tree hangs down from here.' : 'Back to `/` for the next branch.' });
+    steps.push({ n: c.id, c: `${c.title}: ${c.sub}.` });
+    DIRS.filter(d => d.cat === c.id).forEach(d => steps.push({ n: d.id, c: `\`${d.d}\`: ${d.what}` }));
+  });
+  return steps;
+}
+const presetBar = $('presetBar');
+PRESETS.forEach(p => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.innerHTML = `<code>${esc(p)}</code>`; b.addEventListener('click', () => { $('pathInput').value = p; trace(p); }); presetBar.appendChild(b); });
+function clearFruit() { DIRS.forEach(d => { d.subEl.textContent = d.sub; d.subEl.style.fill = 'var(--muted)'; d.subEl.style.fontFamily = ''; }); }
+function trace(raw) {
+  setLive(true);
+  const typed = (raw || '').trim().replace(/\/+/g, '/');
+  if (!typed) return;
+  clearFruit();
+  let p = typed, seg = [], note = '';
+  const steps = [{ n: 'root', path: '/' }];
+  if (!typed.startsWith('/')) {
+    steps[0].c = `\`${typed}\` is a relative path. Linux reads it starting from the current directory (see \`pwd\`), not from \`/\`. Type a path that starts with \`/\` to locate it here.`;
+  } else {
+    const norm = t => { const out = []; for (const s of t.split('/')) { if (s === '..') out.pop(); else if (s && s !== '.') out.push(s); } return out; };
+    seg = norm(typed);
+    p = '/' + seg.join('/');
+    if (p !== typed.replace(/(.)\/$/, '$1')) {
+      note = ` Read as text, \`${typed}\` becomes \`${p}\`.`;
+      if (typed.split('/').includes('..')) {
+        note += ' The kernel works differently: it follows each symbolic link before applying `..`, so the real destination can differ.';
+        // merged-/usr systems (current Ubuntu): /bin, /sbin and /lib are links into /usr
+        const merged = '/' + norm(typed.replace(/^\/(bin|sbin|lib|lib32|lib64)(?=\/|$)/, '/usr/$1')).join('/');
+        if (merged !== p) note += ` On Ubuntu, where \`/${typed.split('/')[1]}\` links into \`/usr\`, the kernel would look for \`${merged}\` instead.`;
+      }
+    }
+    steps[0].c = `An absolute path starts at \`/\`. Reading \`${p}\` from left to right walks down the tree.`;
+  }
+  if (seg.length) {
+    const d = F['d/' + seg[0]];
+    if (!d) {
+      steps[0].c = `\`/${seg[0]}\` is not in this tutorial’s selection of top-level directories. Systems can have others, such as ${['/lib64 (an alternate library directory allowed by the FHS)', '/snap', '/work on a cluster'].filter(x => x.split(' ')[0] !== '/' + seg[0]).join(', ').replace(/, ([^,]*)$/, ' or $1')}.`;
+    } else {
+      const rest = seg.slice(1).join('/');
+      steps.push({ n: d.cat, c: `\`${d.d}\` belongs to the “${F[d.cat].title}” group.`, path: d.d });
+      const known = KNOWN[p];
+      const tail = rest ? `Inside it, \`${rest}\`. ` : '';
+      steps.push({ n: d.id, c: `\`${d.d}\`: ${d.sub}. ${tail}${known || ''}`.trim(), path: p });
+      if (rest) {
+        // fit by rendered width, keeping the end of the path (usually the file name)
+        const el = d.subEl, room = d.w - 28; let tail = rest;
+        el.style.fill = `var(${d.color})`; el.style.fontFamily = 'var(--f-mono)';
+        el.textContent = '…/' + tail;
+        while (tail.length > 1 && el.getComputedTextLength() > room) { tail = tail.slice(1); el.textContent = '…' + tail; }
+      }
+      select(d.id);
+    }
+  }
+  // the last step stays on screen, so the caveat goes there
+  if (note) steps[steps.length - 1].c += note;
+  fsPlayer.pause();
+  fsPlayer.setSteps(steps, true);
+  if (REDUCE) { steps.forEach((_, i) => fsPlayer.go(i, false)); syncPlayBtn(); return; }
+  fsPlayer.play();
+  syncPlayBtn();
+}
+$('fsBar').addEventListener('submit', e => { e.preventDefault(); trace($('pathInput').value); });
+
+/* ---- view switching and controls ---- */
+const player = () => (view === 'fs' ? fsPlayer : sysPlayer);
+function switchView(v) {
+  if (v === view) return;
+  player().pause();
+  view = v;
+  ['sys', 'fs', 'story'].forEach(k => { const t = $('tab-' + k); t.setAttribute('aria-selected', k === v); t.tabIndex = k === v ? 0 : -1; });
+  if (v !== 'story') $('stage').setAttribute('aria-labelledby', 'tab-' + v);
+  $('stage').hidden = v === 'story'; $('story').hidden = v !== 'story';
+  if (v === 'story') { $('backBtn').hidden = true; try { history.replaceState(null, '', '#story'); } catch (e) {} syncPlayBtn(); return; }
+  gSys.toggleAttribute('hidden', v !== 'sys'); gFs.toggleAttribute('hidden', v !== 'fs');
+  scenBar.hidden = v !== 'sys'; $('fsBar').hidden = v !== 'fs'; presetBar.hidden = v !== 'fs'; $('sysNote').hidden = v !== 'sys';
+  svg.setAttribute('viewBox', v === 'sys' ? '0 0 1216 1010' : `0 0 ${FS_W} ${FS_H}`);
+  svg.setAttribute('aria-label', v === 'sys' ? 'Upside-down tree of the Linux operating system' : 'Upside-down tree of the Linux file system');
+  if (v === 'sys') { setScenario(scenKey, !REDUCE, true); select(selected && (S[selected] || KS[selected] || selected === 'syscall') ? selected : 'kernel'); }
+  else { clearFruit(); setLive(false); fsPlayer.setSteps(fsTour(), true); fsTerm({ n: 'root' }); if (REDUCE) fsPlayer.showAll(); else fsPlayer.play(); select('root'); }
+  try { history.replaceState(null, '', v === 'fs' ? '#fs' : '#system'); } catch (e) {}
+  centerDiagram();
+  syncPlayBtn();
+}
+$('tab-sys').addEventListener('click', () => switchView('sys'));
+$('tab-fs').addEventListener('click', () => switchView('fs'));
+$('tab-story').addEventListener('click', () => switchView('story'));
+// tablist keyboard model: arrows, Home and End move between tabs and select them
+document.querySelector('.tabs').addEventListener('keydown', e => {
+  const keys = ['sys', 'fs', 'story'], i = keys.indexOf(view);
+  const j = { ArrowRight: (i + 1) % 3, ArrowLeft: (i + 2) % 3, Home: 0, End: 2 }[e.key];
+  if (j === undefined) return;
+  e.preventDefault(); switchView(keys[j]); $('tab-' + keys[j]).focus();
+});
+
+/* ---- story ---- */
+const TIER_FC = { hw: '--bark', kernel: '--kernel', small: '--tool', leaf: '--leaf', ext: '--ext' };
+function flowMeta(id) {
+  if (id === 'syscall') return { k: 'Border', c: '--kernel' };
+  if (id === 'boot') return { k: 'Before the kernel', c: '--bark' };
+  if (KS[id]) return { k: 'Trunk · ' + KS[id].label, c: '--kernel' };
+  if (S[id]) { const t = S[id].tier; return { k: TIER[t].meta, c: TIER_FC[t] || S[id].color }; }
+  return { k: 'Virtual', c: '--faint' };
+}
+document.querySelectorAll('.flow[data-flow]').forEach(el => {
+  el.innerHTML = el.dataset.flow.split(' > ').map((part, i) => {
+    let [id, label] = part.split('|');
+    const dashed = id.startsWith('~'); if (dashed) id = id.slice(1);
+    const m = flowMeta(id);
+    const arrow = i === 0 ? '' : dashed ? '<span class="farrow dashed" aria-hidden="true" title="output to the terminal, not a pipe"><svg width="24" height="10" viewBox="0 0 24 10"><line x1="1" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/><path d="M16 1.5 L22 5 L16 8.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>' : '<span class="farrow" aria-hidden="true">→</span>';
+    return arrow + `<div class="fstep" style="--fc:var(${m.c})"><b>${esc(m.k)}</b><span>${esc(label)}</span></div>`;
+  }).join('');
+  el.setAttribute('role', 'img');
+  el.setAttribute('aria-label', 'Flow: ' + el.dataset.flow.replace(/~/g, '').split(' > ').map(x => x.split('|')[1]).join(', then '));
+});
+const PROMPT = /^((?:\(\w+\) )?(?:\[[^\]]+\]\$|[\w.-]+@[\w.-]+:[^$\s]*\$) )/;
+document.querySelectorAll('.tblock').forEach(el => {
+  el.innerHTML = el.innerHTML.split('\n').map(l => {
+    const m = l.match(PROMPT);
+    if (m) return `<span class="p">${m[1]}</span>${l.slice(m[1].length)}`;
+    if (/^\s*#(?!!|SBATCH)/.test(l)) return `<span class="c">${l}</span>`;
+    return l;
+  }).join('\n');
+});
+document.querySelectorAll('.chapter [data-paths]').forEach(el => el.dataset.paths.split(' ').forEach(p => el.appendChild(pathChip(p))));
+document.querySelectorAll('.showme[data-scen]').forEach(b => b.addEventListener('click', () => {
+  storyReturn = b.closest('.chapter').id;
+  switchView('sys');
+  setScenario(b.dataset.scen, !REDUCE);
+  $('backBtn').hidden = false;
+  $('stage').scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' });
+}));
+document.querySelectorAll('[data-view]').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault(); switchView(a.dataset.view);
+  const target = (a.dataset.goto && $(a.dataset.goto)) || document.querySelector('.tabs');
+  target.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' });
+}));
+$('backBtn').addEventListener('click', () => {
+  const id = storyReturn; switchView('story');
+  const el = id && $(id); if (el) el.scrollIntoView({ block: 'start' });
+});
+function syncPlayBtn() {
+  const p = player(), steps = p.steps || [];
+  $('playBtn').textContent = p.playing ? 'Pause' : (steps.length && p.atEnd() ? 'Replay' : 'Play');
+  $('prevBtn').disabled = p.idx < 0;
+  $('stepBtn').disabled = !steps.length || p.atEnd();
+  svg.classList.toggle('paused', !p.playing);
+}
+$('playBtn').addEventListener('click', () => {
+  setLive(true);
+  const p = player();
+  if (p.playing) p.pause();
+  else { if (p.atEnd()) p.reset(); if (REDUCE) p.step(); else p.play(); }
+  syncPlayBtn();
+});
+$('stepBtn').addEventListener('click', () => { setLive(true); player().step(); syncPlayBtn(); });
+$('prevBtn').addEventListener('click', () => { setLive(true); const p = player(); p.jump(p.idx - 1); syncPlayBtn(); });
+$('restartBtn').addEventListener('click', () => {
+  setLive(true);
+  const p = player();
+  // in the file-system view, Restart returns to the directory tour (Replay repeats a located path)
+  if (view === 'fs') { clearFruit(); p.setSteps(fsTour(), true); } else p.reset();
+  if (!REDUCE) p.play(); else p.showAll();
+  syncPlayBtn();
+});
+
+/* ---- share ---- */
+// Set SHARE_URL to the page's public address; when empty, the canonical link or current address is used.
+const SHARE_URL = '';
+const shareUrl = SHARE_URL || (document.querySelector('link[rel="canonical"]') || {}).href || location.href.split('#')[0];
+const shareTitle = 'How Linux Works: An Upside-Down Tree';
+const enc = encodeURIComponent;
+const SHARE_HREF = {
+  linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(shareUrl)}`,
+  bluesky: `https://bsky.app/intent/compose?text=${enc(shareTitle + ' ' + shareUrl)}`,
+  x: `https://x.com/intent/post?text=${enc(shareTitle)}&url=${enc(shareUrl)}`,
+  email: `mailto:?subject=${enc(shareTitle)}&body=${enc(shareUrl)}`
+};
+document.querySelectorAll('[data-share]').forEach(a => { a.href = SHARE_HREF[a.dataset.share]; });
+document.querySelectorAll('[data-copy-link]').forEach(b => b.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(shareUrl); b.textContent = 'Link copied'; } catch (e) { b.textContent = shareUrl; }
+  setTimeout(() => { b.textContent = 'Copy link'; const d = b.closest('details'); if (d) d.open = false; }, 1800);
+}));
+document.querySelectorAll('[data-native-share]').forEach(b => {
+  if (typeof navigator.share !== 'function') return;
+  b.hidden = false;
+  b.addEventListener('click', () => navigator.share({ title: shareTitle, url: shareUrl }).catch(() => {}));
+});
+const shareMenu = document.querySelector('details.share-menu');
+document.addEventListener('click', e => { if (shareMenu.open && !shareMenu.contains(e.target)) shareMenu.open = false; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && shareMenu.open) { shareMenu.open = false; shareMenu.querySelector('summary').focus(); } });
+shareMenu.querySelectorAll('[data-share]').forEach(a => a.addEventListener('click', () => { shareMenu.open = false; }));
+
+/* ---- theme ---- */
+const themeBtn = $('themeBtn');
+function isDark() { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; }
+function syncTheme() { themeBtn.textContent = isDark() ? 'Light theme' : 'Dark theme'; }
+try { const t = localStorage.getItem('lud-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+themeBtn.addEventListener('click', () => { const t = isDark() ? 'light' : 'dark'; document.documentElement.dataset.theme = t; try { localStorage.setItem('lud-theme', t); } catch (e) {} syncTheme(); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme);
+syncTheme();
+
+/* ---- start ---- */
+select('kernel');
+centerDiagram();
+setScenario('ls', !REDUCE, true);
+if (location.hash === '#fs') switchView('fs');
+if (location.hash === '#story') switchView('story');
+syncPlayBtn();
+})();
+</script>
+</body>
+</html>
